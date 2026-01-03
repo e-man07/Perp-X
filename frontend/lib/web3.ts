@@ -25,20 +25,20 @@ export const queryClient = new QueryClient({
   },
 })
 
-// Create Wagmi Adapter
+// Create Wagmi Adapter for Arbitrum Sepolia
 export const wagmiAdapter = new WagmiAdapter({
-  networks: [config.monadTestnet],
+  networks: [config.arbitrumSepolia],
   projectId: config.projectId,
 })
 
 // Create modal
 createAppKit({
   adapters: [wagmiAdapter],
-  networks: [config.monadTestnet],
+  networks: [config.arbitrumSepolia],
   projectId: config.projectId,
   metadata: {
     name: 'Perp-X',
-    description: 'Leveraged Prediction Markets on Monad',
+    description: 'Leveraged Prediction Markets on Arbitrum',
     url: 'https://perp-x.xyz',
     icons: ['https://avatars.githubusercontent.com/u/37784886']
   },

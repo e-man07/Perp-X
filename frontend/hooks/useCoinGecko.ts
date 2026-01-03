@@ -10,10 +10,10 @@ const COINGECKO_CANDLES_API = '/api/coingecko/candles';
 const MARKET_TO_COINGECKO: Record<string, string> = {
   'BTC/USD': 'bitcoin',
   'ETH/USD': 'ethereum',
-  'MON/USD': 'monad', // May need to check if this exists
+  'ARB/USD': 'arbitrum',
   'btc': 'bitcoin',
   'eth': 'ethereum',
-  'mon': 'monad',
+  'arb': 'arbitrum',
 };
 
 export interface CoinGeckoPrice {

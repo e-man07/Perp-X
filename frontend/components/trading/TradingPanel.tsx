@@ -12,7 +12,6 @@ import { useVaultBalance, useTokenBalance, useApproveToken, useDepositCollateral
 import { useMarketPrice, useMarketData } from '@/hooks/useMarketData';
 import { useUserPositions } from '@/hooks/usePositions';
 import { useCoinGeckoPrice } from '@/hooks/useCoinGecko';
-import { useMockPositions } from '@/hooks/useMockPositions';
 import { config } from '@/lib/config';
 import { Clock, TrendingUp, TrendingDown, AlertCircle, Wallet } from 'lucide-react';
 
@@ -31,14 +30,22 @@ export function TradingPanel({ market }: TradingPanelProps) {
 
   // Get real data from hooks
   const { availableCollateral, refetch: refetchVault } = useVaultBalance();
-  const { balance: walletBalance, allowance, refetch: refetchToken } = useTokenBalance(config.contracts.mockUSDC);
+  const { balance: walletBalance, allowance, refetch: refetchToken } = useTokenBalance(config.contracts.usdc);
   
   // Get market name for CoinGecko
   const marketName = useMemo(() => {
+    // Check against config market addresses
+    const markets = config.contracts.markets;
     const addrLower = marketAddress.toLowerCase();
-    if (addrLower.includes('btc')) return 'BTC/USD';
-    if (addrLower.includes('eth')) return 'ETH/USD';
-    if (addrLower.includes('mon')) return 'MON/USD';
+    if (addrLower === markets.btc.micro.toLowerCase() ||
+        addrLower === markets.btc.daily.toLowerCase() ||
+        addrLower === markets.btc.macro.toLowerCase()) return 'BTC/USD';
+    if (addrLower === markets.eth.micro.toLowerCase() ||
+        addrLower === markets.eth.daily.toLowerCase() ||
+        addrLower === markets.eth.macro.toLowerCase()) return 'ETH/USD';
+    if (addrLower === markets.arb.micro.toLowerCase() ||
+        addrLower === markets.arb.daily.toLowerCase() ||
+        addrLower === markets.arb.macro.toLowerCase()) return 'ARB/USD';
     return 'BTC/USD'; // Default
   }, [marketAddress]);
   
@@ -72,7 +79,6 @@ export function TradingPanel({ market }: TradingPanelProps) {
   
   const { expiryTimestamp, settled, totalLongOI, totalShortOI } = useMarketData(marketAddress);
   const { refetch: refetchPositions } = useUserPositions();
-  const { addMockPosition } = useMockPositions();
   
   // State to track auto-deposit flow (declare before using in isPending)
   const [pendingDepositAmount, setPendingDepositAmount] = useState<number | null>(null);
@@ -84,14 +90,23 @@ export function TradingPanel({ market }: TradingPanelProps) {
   const { approve, isPending: isApproving, isSuccess: isApproved, hash: approveHash } = useApproveToken();
   const { deposit, isPending: isDepositing, isSuccess: isDepositSuccess, hash: depositHash } = useDepositCollateral();
   const { openPosition, isPending: isOpeningPosition, isSuccess: isPositionOpen, isError: isPositionError, error: positionError, errorMessage: positionErrorMessage, hash: positionHash } = useOpenPosition();
-  
-  // Track transaction status (after hooks are declared)
-  // In mock mode, we only track approval (no actual deposit/position transactions)
-  const isPending = isApproving || (transactionStartTime !== null && !isApproved);
-  const transactionHash = approveHash; // Only show approval hash in mock mode
-  
-  // In mock mode, positions are refetched in createMockPosition
-  // No need to refetch on isPositionOpen since we're not using real transactions
+
+  // Track transaction status
+  const isPending = isApproving || isOpeningPosition || (transactionStartTime !== null && !isPositionOpen);
+  const transactionHash = positionHash || approveHash;
+
+  // Refetch positions after successful position open
+  useEffect(() => {
+    if (isPositionOpen) {
+      setIsPositionCreated(true);
+      setTimeout(() => {
+        refetchPositions();
+        setIsPositionCreated(false);
+        setTransactionStartTime(null);
+        setPendingPosition(null);
+      }, 3000);
+    }
+  }, [isPositionOpen, refetchPositions]);
 
   // Calculate expiry info
   const expiry = expiryTimestamp ? Number(expiryTimestamp) : 0;
@@ -136,142 +151,48 @@ export function TradingPanel({ market }: TradingPanelProps) {
     }
   }, [isPending, transactionStartTime]);
 
-  // MOCK MODE: After wallet approval succeeds, create mock position
-  // This ensures user confirms the transaction in their wallet first
+  // After wallet approval succeeds, open real position on contract
   useEffect(() => {
-    console.log('Approval useEffect triggered', { 
-      isApproved, 
-      pendingPosition, 
+    console.log('Approval useEffect triggered', {
+      isApproved,
+      pendingPosition,
       isApproving,
       approveHash,
-      address 
+      address
     });
-    
-    // Only create position after user confirms approval in wallet
-    if (isApproved && pendingPosition && !isApproving) {
-      console.log('Wallet approval confirmed! Creating mock position...');
-      // Simulate a delay like a real transaction would take
-      setTimeout(() => {
-        createMockPosition(
-          pendingPosition.amount, 
-          pendingPosition.direction === 0 ? 'long' : 'short', 
-          pendingPosition.leverage
-        );
-        setPendingDepositAmount(null);
-        setPendingPosition(null);
-        setTransactionStartTime(null);
-      }, 1000);
+
+    // Open position after user confirms approval in wallet
+    if (isApproved && pendingPosition && !isApproving && !isOpeningPosition) {
+      console.log('Wallet approval confirmed! Opening position on contract...');
+
+      // Convert to contract format (18 decimals for collateral/leverage)
+      const collateralBigInt = BigInt(Math.floor(pendingPosition.amount * 1e18));
+      const leverageBigInt = BigInt(pendingPosition.leverage * 100); // Leverage in basis points (100 = 1x)
+
+      openPosition(
+        marketAddress,
+        pendingPosition.direction,
+        collateralBigInt,
+        leverageBigInt
+      );
     }
-  }, [isApproved, pendingPosition, isApproving, address]);
+  }, [isApproved, pendingPosition, isApproving, isOpeningPosition, marketAddress, openPosition]);
 
-  // Helper function to create mock position
-  const createMockPosition = (collateralAmount: number, side: 'long' | 'short', leverage: number) => {
-    console.log('=== createMockPosition START ===');
-    console.log('createMockPosition called', { collateralAmount, side, leverage, address, currentPrice, marketAddress });
-    
-    if (!address) {
-      console.error('No address available for mock position');
-      return;
-    }
-
-    // Get market name
-    const marketName = marketAddress.toLowerCase().includes('btc') ? 'BTC/USD' :
-                      marketAddress.toLowerCase().includes('eth') ? 'ETH/USD' :
-                      marketAddress.toLowerCase().includes('mon') ? 'MON/USD' : 'Unknown';
-
-    // Create mock position with current price as entry
-    const positionSize = collateralAmount * leverage;
-    const entryPrice = currentPrice || 50000; // Use CoinGecko price
-    const liquidationPrice = entryPrice > 0
-      ? (side === 'long' 
-          ? entryPrice * (1 - 1/leverage)
-          : entryPrice * (1 + 1/leverage))
-      : 0;
-
-    const positionData = {
-      user: address,
-      market: marketAddress,
-      marketName,
-      direction: (side === 'long' ? 0 : 1) as 0 | 1,
-      collateralUSD: collateralAmount,
-      leverage,
-      positionSize,
-      entryPrice,
-      currentPrice: entryPrice,
-      liquidationPrice,
-    };
-
-    console.log('Creating mock position with:', positionData);
-
-    try {
-      const positionId = addMockPosition(positionData);
-      console.log('Mock position created successfully with ID:', positionId);
-      console.log('=== createMockPosition END (success) ===');
-      
-      // Show success animation
-      setIsPositionCreated(true);
-      
-      // Auto-hide animation after 3 seconds
-      setTimeout(() => {
-        setIsPositionCreated(false);
-      }, 3000);
-      
-      // Force a page refresh of positions by triggering multiple events
-      // This ensures PositionsPanel picks up the new position immediately
-      if (typeof window !== 'undefined') {
-        console.log('Dispatching events for positionId:', positionId);
-        
-        // Get current positions from localStorage to include in storage event
-        const stored = localStorage.getItem('perp-x-mock-positions');
-        const currentPositions = stored ? JSON.parse(stored) : [];
-        
-        // Dispatch multiple events to ensure all components pick it up
-        window.dispatchEvent(new CustomEvent('mockPositionCreated', { 
-          detail: { positionId, position: positionData } 
-        }));
-        
-        window.dispatchEvent(new CustomEvent('mockPositionsUpdated', {
-          detail: { count: currentPositions.length }
-        }));
-        
-        // Double-check localStorage was updated
-        setTimeout(() => {
-          const verified = localStorage.getItem('perp-x-mock-positions');
-          if (verified) {
-            const parsed = JSON.parse(verified);
-            console.log('Verified position in localStorage:', parsed.length, 'positions');
-          }
-        }, 100);
-      }
-      
-      // Refetch positions to show the new one
-      setTimeout(() => {
-        refetchPositions();
-        console.log('Positions refetched');
-      }, 200);
-    } catch (error) {
-      console.error('Error creating mock position:', error);
-      console.log('=== createMockPosition END (error) ===');
-      alert('Failed to create position. Please check console for details.');
-    }
-  };
-
-  // MOCK MODE: Simulate transaction flow but create mock positions
-  // Still requires wallet approval to make it feel real
+  // Handle opening a new position
   const handleOpenPosition = () => {
     console.log('=== handleOpenPosition START ===');
-    console.log('handleOpenPosition called', { 
-      isConnected, 
-      address, 
-      collateral, 
-      availableCollateral, 
+    console.log('handleOpenPosition called', {
+      isConnected,
+      address,
+      collateral,
+      availableCollateral,
       walletBalance,
       isPending,
       isExpired,
       side,
       leverage
     });
-    
+
     if (!isConnected || !address) {
       console.warn('Wallet not connected');
       alert('Please connect your wallet');
@@ -284,52 +205,60 @@ export function TradingPanel({ market }: TradingPanelProps) {
       return;
     }
 
+    if (collateralAmount > availableCollateral) {
+      alert(`Insufficient vault balance. Available: ${availableCollateral.toFixed(2)} USDC. Please deposit more collateral in Portfolio.`);
+      return;
+    }
+
     // Track transaction start time (for UI feedback)
     setTransactionStartTime(Date.now());
 
-    // MOCK MODE: Always ask for approval first (to make it feel real)
-    // Then create mock position after approval
-    const tokenAddress = config.contracts.mockUSDC;
-    const approveAmount = BigInt(Math.floor(collateralAmount * 1e6)); // Approve the collateral amount
-    
+    // Get token address for approval
+    const tokenAddress = config.contracts.usdc;
+    const approveAmount = BigInt(Math.floor(collateralAmount * 1e6)); // USDC has 6 decimals
+
     // Store pending position info
     setPendingPosition({
       amount: collateralAmount,
       direction: side === 'long' ? 0 : 1,
       leverage: leverage
     });
-    
-    // ALWAYS ask for wallet approval first (user must confirm in wallet)
-    // This makes it feel real - user sees wallet popup and confirms
+
+    // Check if approval is needed
     const currentAllowance = allowance * 1e6; // Convert back to 6 decimals
-    
-    console.log('Requesting wallet approval', { 
-      currentAllowance, 
-      approveAmount: Number(approveAmount), 
-      collateralAmount, 
-      allowance,
+
+    console.log('Checking approval', {
+      currentAllowance,
+      approveAmount: Number(approveAmount),
       needsApproval: currentAllowance < Number(approveAmount)
     });
-    
-    // Always request approval to show wallet popup (even if already approved)
-    // This ensures user confirms the transaction
-    console.log('Requesting wallet approval for amount:', Number(approveAmount));
-    try {
-      // This will show wallet popup - user must confirm
-      approve(tokenAddress, approveAmount);
-      console.log('Wallet approval requested - waiting for user confirmation...');
-      // After user confirms in wallet, isApproved will become true
-      // Then useEffect will create the mock position
-    } catch (error) {
-      console.error('Error requesting wallet approval:', error);
-      alert('Failed to request wallet approval. Please try again.');
-      setTransactionStartTime(null);
-      setPendingPosition(null);
+
+    if (currentAllowance < Number(approveAmount)) {
+      // Request approval first
+      console.log('Requesting wallet approval for amount:', Number(approveAmount));
+      try {
+        approve(tokenAddress, approveAmount);
+        console.log('Wallet approval requested - waiting for user confirmation...');
+      } catch (error) {
+        console.error('Error requesting wallet approval:', error);
+        alert('Failed to request wallet approval. Please try again.');
+        setTransactionStartTime(null);
+        setPendingPosition(null);
+      }
+    } else {
+      // Already approved, open position directly
+      console.log('Already approved, opening position directly...');
+      const collateralBigInt = BigInt(Math.floor(collateralAmount * 1e18));
+      const leverageBigInt = BigInt(leverage * 100); // Leverage in basis points
+
+      openPosition(
+        marketAddress,
+        side === 'long' ? 0 : 1,
+        collateralBigInt,
+        leverageBigInt
+      );
     }
   };
-  
-  // Reset transaction state (for mock mode, we don't use isPositionOpen)
-  // State is reset in createMockPosition and useEffect above
 
   return (
     <Card>
@@ -723,7 +652,7 @@ export function TradingPanel({ market }: TradingPanelProps) {
             )}
             {transactionHash && (
               <a
-                href={`${config.monadTestnet.blockExplorers.default.url}/tx/${transactionHash}`}
+                href={`${config.arbitrumSepolia.blockExplorers.default.url}/tx/${transactionHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-primary hover:underline"

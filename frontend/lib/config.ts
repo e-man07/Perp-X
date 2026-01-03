@@ -1,60 +1,77 @@
 export const config = {
   projectId: "YOUR_REOWN_PROJECT_ID", // Get from https://cloud.reown.com
-  
-  // Contract Addresses (Monad Testnet)
+
+  // Contract Addresses (Arbitrum Sepolia)
+  // Deployed 2026-01-03
   contracts: {
-    factory: "0x8C4286F9142734Ff8957048Dd7B8Bc21D54D6e42",
-    vault: "0x780b37631cdeaf0cde2b91b67d50c8dca0c53432",
-    positionManager: "0x6f4369a2f5ef635eb002239078f13ee8f5b72cdf",
-    priceAdapter: "0xc719485FEB9FE5C9bEBDa2563a95Eb9415c52685",
-    mockUSDC: "0x213b6548828e25889E6fDD1D4CFb3e328FCF7C40",
+    factory: "0x0000000000000000000000000000000000000000", // OutcomePerpsFactory (not deployed yet)
+    vault: "0xa7209151acb6b484ab7d2a300b48c35ed5b55409", // CollateralVault
+    positionManager: "0xcb3e422143d1c5603c86b0ccd419156bf5d8b045", // PositionManager
+    priceAdapter: "0x50dde8ca05be55a046841a3d6ec5111af52a8d7d", // PythPriceAdapter
+    insuranceFund: "0x0000000000000000000000000000000000000000", // InsuranceFund (not deployed yet)
+    liquidationEngine: "0x2361425d154e66aca0272b718571836203601983", // LiquidationEngine
+    orderBook: "0x0000000000000000000000000000000000000000", // OrderBook (not deployed yet)
+    crossMargin: "0x0000000000000000000000000000000000000000", // CrossMargin (not deployed yet)
+    userMarketFactory: "0x0000000000000000000000000000000000000000", // UserMarketFactory (not deployed yet)
+    usdc: "0x75faf114eafb1BDbe2F0316DF893fd58cE9AF7E6", // Arbitrum Sepolia USDC
     markets: {
       btc: {
-        micro: "0xc3ec3ec6ec1df1d555bba825d9dab03960f36835", // 24h - fallback to existing
-        daily: "0xc3ec3ec6ec1df1d555bba825d9dab03960f36835", // 7d - TODO: update with actual address
-        macro: "0xc3ec3ec6ec1df1d555bba825d9dab03960f36835", // 30d - TODO: update with actual address
+        micro: "0x0000000000000000000000000000000000000000", // 24h BTC market (not deployed yet)
+        daily: "0x0000000000000000000000000000000000000000", // 7d BTC market
+        macro: "0x0000000000000000000000000000000000000000", // 30d BTC market
       },
       eth: {
-        micro: "0xc033f0b877bd405b48f3ad8b8e91340252f068e6", // 24h - fallback to existing
-        daily: "0xc033f0b877bd405b48f3ad8b8e91340252f068e6", // 7d - TODO: update with actual address
-        macro: "0xc033f0b877bd405b48f3ad8b8e91340252f068e6", // 30d - TODO: update with actual address
+        micro: "0x3e741a1d222dc8a392a7caf4d12a8a8b6fb69800", // 24h ETH market (OutcomeMarket)
+        daily: "0x0000000000000000000000000000000000000000", // 7d ETH market
+        macro: "0x0000000000000000000000000000000000000000", // 30d ETH market
       },
-      mon: {
-        micro: "0x3ba4bb2582e214a6f571d3c89d073528e21b6baa", // 24h - fallback to existing
-        daily: "0x3ba4bb2582e214a6f571d3c89d073528e21b6baa", // 7d - TODO: update with actual address
-        macro: "0x3ba4bb2582e214a6f571d3c89d073528e21b6baa", // 30d - TODO: update with actual address
+      arb: {
+        micro: "0x0000000000000000000000000000000000000000", // 24h ARB market (not deployed yet)
+        daily: "0x0000000000000000000000000000000000000000", // 7d ARB market
+        macro: "0x0000000000000000000000000000000000000000", // 30d ARB market
       },
     },
   },
-  
-  // Network Configuration
-  monadTestnet: {
-    id: 10143,
-    name: "Monad Testnet",
-    network: "monad-testnet",
+
+  // External Addresses
+  external: {
+    pythOracle: "0xC5E56d6b40F3e5F65e23aEe2e85dD8139279C11C",
+  },
+
+  // Pyth Price Feed IDs
+  priceFeedIds: {
+    "BTC/USD": "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a4b68b",
+    "ETH/USD": "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
+    "ARB/USD": "0x3fa4252848f9f0a1480be62745a4629d9eb1322aebab8a791e344b3b9c1adcf",
+  },
+
+  // Network Configuration - Arbitrum Sepolia
+  arbitrumSepolia: {
+    id: 421614,
+    name: "Arbitrum Sepolia",
+    network: "arbitrum-sepolia",
     nativeCurrency: {
       decimals: 18,
-      name: "Monad",
-      symbol: "MON",
+      name: "Ethereum",
+      symbol: "ETH",
     },
     rpcUrls: {
-      default: { 
+      default: {
         http: [
-          "https://monad-testnet.g.alchemy.com/v2/lfzFRKcsu0i6H8DvmG3jPH9-E8GnaGop",
-          "https://testnet-rpc.monad.xyz", // Fallback
-        ] 
+          "https://arb-sepolia.g.alchemy.com/v2/lfzFRKcsu0i6H8DvmG3jPH9-E8GnaGop",
+          "https://sepolia-rollup.arbitrum.io/rpc", // Fallback public RPC
+        ]
       },
-      public: { 
+      public: {
         http: [
-          "https://monad-testnet.g.alchemy.com/v2/lfzFRKcsu0i6H8DvmG3jPH9-E8GnaGop",
-          "https://testnet-rpc.monad.xyz", // Fallback
-        ] 
+          "https://sepolia-rollup.arbitrum.io/rpc",
+        ]
       },
     },
     blockExplorers: {
       default: {
-        name: "Monad Explorer",
-        url: "https://explorer.testnet.monad.xyz",
+        name: "Arbiscan",
+        url: "https://sepolia.arbiscan.io",
       },
     },
     testnet: true,

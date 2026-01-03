@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/Button";
 import { formatTimeRemaining, formatNumber } from "@/lib/utils";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { useMarketData } from "@/hooks/useMarketData";
+import { useCoinGeckoPrice } from "@/hooks/useCoinGecko";
 import { config } from "@/lib/config";
 
 // Generate all market combinations with expiry options
@@ -19,27 +20,29 @@ const marketConfigs = [
   { name: "ETH/USD", address: config.contracts.markets.eth.micro, duration: "24 Hours", expiry: "micro" },
   { name: "ETH/USD", address: config.contracts.markets.eth.daily, duration: "7 Days", expiry: "daily" },
   { name: "ETH/USD", address: config.contracts.markets.eth.macro, duration: "30 Days", expiry: "macro" },
-  // MON/USD markets
-  { name: "MON/USD", address: config.contracts.markets.mon.micro, duration: "24 Hours", expiry: "micro" },
-  { name: "MON/USD", address: config.contracts.markets.mon.daily, duration: "7 Days", expiry: "daily" },
-  { name: "MON/USD", address: config.contracts.markets.mon.macro, duration: "30 Days", expiry: "macro" },
+  // ARB/USD markets
+  { name: "ARB/USD", address: config.contracts.markets.arb.micro, duration: "24 Hours", expiry: "micro" },
+  { name: "ARB/USD", address: config.contracts.markets.arb.daily, duration: "7 Days", expiry: "daily" },
+  { name: "ARB/USD", address: config.contracts.markets.arb.macro, duration: "30 Days", expiry: "macro" },
 ];
 
 function MarketCard({ marketConfig }: { marketConfig: typeof marketConfigs[0] }) {
-  const { 
-    currentPrice, 
-    totalLongOI, 
-    totalShortOI, 
+  const {
+    currentPrice,
+    totalLongOI,
+    totalShortOI,
     expiryTimestamp,
     assetPair,
-    settled 
+    settled
   } = useMarketData(marketConfig.address);
 
-  // Calculate price change (mock for now - would need historical data)
-  const change = 0; // TODO: Calculate from historical data
-  const volume24h = 0; // TODO: Track volume from events
+  // Use CoinGecko for real-time price and 24h change
+  const { price: coinGeckoPrice, change24hPercent } = useCoinGeckoPrice(marketConfig.name);
 
-  const price = currentPrice ? Number(currentPrice) / 1e18 : 0;
+  // Use CoinGecko data for 24h change
+  const change = change24hPercent || 0;
+
+  const price = coinGeckoPrice > 0 ? coinGeckoPrice : (currentPrice ? Number(currentPrice) / 1e18 : 0);
   const longOI = totalLongOI ? Number(totalLongOI) / 1e18 : 0;
   const shortOI = totalShortOI ? Number(totalShortOI) / 1e18 : 0;
   const expiry = expiryTimestamp ? Number(expiryTimestamp) : 0;
@@ -86,11 +89,11 @@ function MarketCard({ marketConfig }: { marketConfig: typeof marketConfigs[0] })
             </div>
           </div>
 
-          {/* Volume */}
+          {/* Total OI */}
           <div>
-            <div className="text-sm text-muted-foreground mb-1">24h Volume</div>
+            <div className="text-sm text-muted-foreground mb-1">Total OI</div>
             <div className="font-medium font-mono">
-              ${formatNumber(volume24h / 1000, 0)}K
+              ${formatNumber(totalOI / 1000, 0)}K
             </div>
           </div>
 

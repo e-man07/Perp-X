@@ -5,15 +5,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { formatUSD, formatNumber } from "@/lib/utils";
-import { Wallet, TrendingUp, Shield, DollarSign } from "lucide-react";
+import { Wallet, TrendingUp, TrendingDown, Shield, DollarSign } from "lucide-react";
 import { useState } from "react";
 import { useAccount } from "wagmi";
 import { useVaultBalance, useTokenBalance, useApproveToken, useDepositCollateral, useWithdrawCollateral } from "@/hooks/useVault";
 import { config } from "@/lib/config";
 import { useUserPositions } from "@/hooks/usePositions";
-import { usePosition, usePositionPnL } from "@/hooks/usePositions";
-import { useMarketPrice } from "@/hooks/useMarketData";
-import { useMemo } from "react";
+import { useCrossMarginAccount } from "@/hooks/useCrossMargin";
 
 export default function PortfolioPage() {
   const { address, isConnected } = useAccount();
@@ -22,17 +20,22 @@ export default function PortfolioPage() {
 
   // Get real vault data
   const { availableCollateral, totalCollateral, lockedCollateral } = useVaultBalance();
-  const { balance: walletBalance } = useTokenBalance(config.contracts.mockUSDC);
+  const { balance: walletBalance } = useTokenBalance(config.contracts.usdc);
   const { approve, isPending: isApproving, isSuccess: isApproved } = useApproveToken();
   const { deposit, isPending: isDepositing, isSuccess: isDepositSuccess } = useDepositCollateral();
   const { withdraw, isPending: isWithdrawing } = useWithdrawCollateral();
 
+  // Get cross-margin account data (includes equity which accounts for unrealized PnL)
+  const { equity, marginUsed, isLoading: crossMarginLoading } = useCrossMarginAccount();
+
   // Calculate total PnL from all positions
   const { positionIds } = useUserPositions();
-  
-  // Calculate total PnL (simplified - would need to fetch all position details)
-  const totalPnL = 0; // TODO: Calculate from all positions
-  const totalPnLPercent = 0;
+
+  // Calculate total PnL as difference between equity and deposited collateral
+  // Equity = deposits + unrealized PnL, so PnL = equity - deposits
+  const totalPnL = equity - totalCollateral;
+  const totalPnLPercent = totalCollateral > 0 ? (totalPnL / totalCollateral) * 100 : 0;
+  const isPnLPositive = totalPnL >= 0;
 
   const handleApprove = () => {
     const amount = parseFloat(depositAmount || '0');
@@ -42,7 +45,7 @@ export default function PortfolioPage() {
     }
     // Approve max amount (or specific amount)
     const amountBigInt = BigInt(Math.floor(amount * 1e6)); // USDC has 6 decimals
-    approve(config.contracts.mockUSDC, amountBigInt);
+    approve(config.contracts.usdc, amountBigInt);
   };
 
   const handleDeposit = () => {
@@ -56,7 +59,7 @@ export default function PortfolioPage() {
       return;
     }
     const amountBigInt = BigInt(Math.floor(amount * 1e6)); // USDC has 6 decimals
-    deposit(config.contracts.mockUSDC, amountBigInt);
+    deposit(config.contracts.usdc, amountBigInt);
     
     // Clear input on success
     if (isDepositSuccess) {
@@ -75,7 +78,7 @@ export default function PortfolioPage() {
       return;
     }
     const amountBigInt = BigInt(Math.floor(amount * 1e6)); // USDC has 6 decimals
-    withdraw(config.contracts.mockUSDC, amountBigInt);
+    withdraw(config.contracts.usdc, amountBigInt);
     
     // Clear input
     setWithdrawAmount("");
@@ -134,14 +137,18 @@ export default function PortfolioPage() {
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-3 mb-2">
-                <TrendingUp className="h-5 w-5 text-success" />
+                {isPnLPositive ? (
+                  <TrendingUp className="h-5 w-5 text-success" />
+                ) : (
+                  <TrendingDown className="h-5 w-5 text-error" />
+                )}
                 <span className="text-sm text-muted-foreground">Total PnL</span>
               </div>
-              <div className="text-2xl font-bold font-mono text-success">
-                +{formatUSD(totalPnL)}
+              <div className={`text-2xl font-bold font-mono ${isPnLPositive ? 'text-success' : 'text-error'}`}>
+                {isPnLPositive ? '+' : ''}{formatUSD(totalPnL)}
               </div>
-              <div className="text-xs text-success">
-                +{formatNumber(totalPnLPercent, 2)}%
+              <div className={`text-xs ${isPnLPositive ? 'text-success' : 'text-error'}`}>
+                {isPnLPositive ? '+' : ''}{formatNumber(totalPnLPercent, 2)}%
               </div>
             </CardContent>
           </Card>

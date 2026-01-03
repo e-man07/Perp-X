@@ -127,15 +127,15 @@ function getMarketName(address: string): string {
   const markets = config.contracts.markets;
   // Check all expiry options for each asset
   const addrLower = address.toLowerCase();
-  if (addrLower === markets.btc.micro.toLowerCase() || 
-      addrLower === markets.btc.daily.toLowerCase() || 
+  if (addrLower === markets.btc.micro.toLowerCase() ||
+      addrLower === markets.btc.daily.toLowerCase() ||
       addrLower === markets.btc.macro.toLowerCase()) return 'BTC/USD';
-  if (addrLower === markets.eth.micro.toLowerCase() || 
-      addrLower === markets.eth.daily.toLowerCase() || 
+  if (addrLower === markets.eth.micro.toLowerCase() ||
+      addrLower === markets.eth.daily.toLowerCase() ||
       addrLower === markets.eth.macro.toLowerCase()) return 'ETH/USD';
-  if (addrLower === markets.mon.micro.toLowerCase() || 
-      addrLower === markets.mon.daily.toLowerCase() || 
-      addrLower === markets.mon.macro.toLowerCase()) return 'MON/USD';
+  if (addrLower === markets.arb.micro.toLowerCase() ||
+      addrLower === markets.arb.daily.toLowerCase() ||
+      addrLower === markets.arb.macro.toLowerCase()) return 'ARB/USD';
   return address.slice(0, 6) + '...';
 }
 

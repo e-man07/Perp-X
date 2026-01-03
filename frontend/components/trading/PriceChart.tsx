@@ -22,7 +22,7 @@ export function PriceChart({ market }: PriceChartProps) {
     const marketLower = market.toLowerCase();
     if (marketLower.includes('btc')) return config.contracts.markets.btc.micro;
     if (marketLower.includes('eth')) return config.contracts.markets.eth.micro;
-    if (marketLower.includes('mon')) return config.contracts.markets.mon.micro;
+    if (marketLower.includes('arb')) return config.contracts.markets.arb.micro;
     return config.contracts.markets.btc.micro; // Default
   }, [market]);
 

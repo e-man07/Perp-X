@@ -24,7 +24,7 @@ const expiryOptions: { key: ExpiryOption; label: string; hours: number }[] = [
 const assetMarkets = [
   { name: "BTC/USD", key: "btc" as const },
   { name: "ETH/USD", key: "eth" as const },
-  { name: "MON/USD", key: "mon" as const },
+  { name: "ARB/USD", key: "arb" as const },
 ];
 
 interface MarketSelectorProps {
