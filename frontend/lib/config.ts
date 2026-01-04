@@ -14,7 +14,7 @@ export const config = {
     orderBook: "0x0fcd5872c3730ac931d6ef52256b35e1079d40e6", // OrderBook
     crossMargin: "0xce63953845b7b9732ed5fd0f0b519881f7904f66", // CrossMargin
     userMarketFactory: "0xbb738208be7a40977b34cf288c9fe13c01fa313d", // UserMarketFactory
-    usdc: "0xdbc8c016287437ce2cf69ff64c245a4d74599a40", // MockUSDC for testing (18 decimals)
+    usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // Circle USDC (6 decimals)
     markets: {
       btc: {
         micro: "0xe5c416f4d00359a23e9623f83d48342092d74b3e", // 24h BTC market (NEW)
