@@ -3,21 +3,21 @@ export const config = {
   projectId: process.env.NEXT_PUBLIC_REOWN_PROJECT_ID || "YOUR_REOWN_PROJECT_ID",
 
   // Contract Addresses (Arbitrum Sepolia)
-  // Deployed 2026-01-03, Updated 2026-01-04 with fixed Pyth integration
+  // Deployed 2026-01-04 - Full working system
   contracts: {
     factory: "0x0000000000000000000000000000000000000000", // OutcomePerpsFactory (use markets directly)
-    vault: "0xa7209151acb6b484ab7d2a300b48c35ed5b55409", // CollateralVault
+    vault: "0xf77ada7706ab8869230900e3be8835ddd4f7195a", // CollateralVault (NEW)
     positionManager: "0xcb3e422143d1c5603c86b0ccd419156bf5d8b045", // PositionManager
-    priceAdapter: "0xb4b7bc3957eaf4e75be74f83a25e659ed0bd8e5c", // PythPriceAdapter (NEW - fixed)
+    priceAdapter: "0xb4b7bc3957eaf4e75be74f83a25e659ed0bd8e5c", // PythPriceAdapter
     insuranceFund: "0xb10706d5d65bba12092ff359005c216ee863a344", // InsuranceFund
     liquidationEngine: "0x2361425d154e66aca0272b718571836203601983", // LiquidationEngine
     orderBook: "0x0fcd5872c3730ac931d6ef52256b35e1079d40e6", // OrderBook
     crossMargin: "0xce63953845b7b9732ed5fd0f0b519881f7904f66", // CrossMargin
     userMarketFactory: "0xbb738208be7a40977b34cf288c9fe13c01fa313d", // UserMarketFactory
-    usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // Arbitrum Sepolia USDC (Circle official)
+    usdc: "0xdbc8c016287437ce2cf69ff64c245a4d74599a40", // MockUSDC for testing (18 decimals)
     markets: {
       btc: {
-        micro: "0x62e103b4284c01af6d119df755ec59ab6247559d", // 24h BTC market (NEW - fixed Pyth calls)
+        micro: "0xe5c416f4d00359a23e9623f83d48342092d74b3e", // 24h BTC market (NEW)
         daily: "0x0000000000000000000000000000000000000000", // 7d BTC market
         macro: "0x0000000000000000000000000000000000000000", // 30d BTC market
       },
