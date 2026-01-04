@@ -5,7 +5,7 @@ import { BinaryMarketABI } from '@/lib/abis/BinaryMarket';
 
 export function useBinaryMarketData(marketAddress: string) {
   const { address } = useAccount();
-  const isValidAddress = marketAddress && marketAddress !== "0x0000000000000000000000000000000000000000";
+  const isValidAddress = Boolean(marketAddress && marketAddress !== "0x0000000000000000000000000000000000000000");
 
   const { data: question } = useReadContract({
     address: marketAddress as `0x${string}`,

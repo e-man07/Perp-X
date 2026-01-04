@@ -4,6 +4,8 @@ import { useAccount, useReadContract, useWriteContract, useWaitForTransactionRec
 import { config } from '@/lib/config';
 import { OrderBookABI } from '@/lib/abis/OrderBook';
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
 export interface Order {
   id: bigint;
   user: string;
@@ -20,6 +22,7 @@ export interface Order {
 
 export function useUserOrders() {
   const { address } = useAccount();
+  const orderBookEnabled = (config.contracts.orderBook as string) !== ZERO_ADDRESS;
 
   const { data: orderIds, refetch, isLoading } = useReadContract({
     address: config.contracts.orderBook as `0x${string}`,
@@ -27,7 +30,7 @@ export function useUserOrders() {
     functionName: 'getUserOrders',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && config.contracts.orderBook !== "0x0000000000000000000000000000000000000000",
+      enabled: !!address && orderBookEnabled,
       refetchInterval: 30000
     },
   });
@@ -36,13 +39,15 @@ export function useUserOrders() {
 }
 
 export function useOrder(orderId: bigint | undefined) {
+  const orderBookEnabled = (config.contracts.orderBook as string) !== ZERO_ADDRESS;
+
   const { data: order, isLoading } = useReadContract({
     address: config.contracts.orderBook as `0x${string}`,
     abi: OrderBookABI,
     functionName: 'getOrder',
     args: orderId ? [orderId] : undefined,
     query: {
-      enabled: !!orderId && config.contracts.orderBook !== "0x0000000000000000000000000000000000000000"
+      enabled: !!orderId && orderBookEnabled
     },
   });
 

@@ -8,7 +8,7 @@ export function NetworkGuard({ children }: { children: React.ReactNode }) {
   const { isConnected } = useAccount();
   const chainId = useChainId();
   const { switchChain, isPending: isSwitching } = useSwitchChain();
-  const targetChainId = config.monadTestnet.id;
+  const targetChainId = config.arbitrumSepolia.id;
   const [hasAttemptedSwitch, setHasAttemptedSwitch] = useState(false);
 
   const isWrongNetwork = isConnected && chainId !== targetChainId;
@@ -17,7 +17,7 @@ export function NetworkGuard({ children }: { children: React.ReactNode }) {
     // Only attempt to switch once per connection
     if (isWrongNetwork && !hasAttemptedSwitch && !isSwitching) {
       setHasAttemptedSwitch(true);
-      // Automatically switch to Monad Testnet if connected to wrong network
+      // Automatically switch to Arbitrum Sepolia if connected to wrong network
       try {
         switchChain({ chainId: targetChainId });
       } catch (error) {

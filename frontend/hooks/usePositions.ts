@@ -17,8 +17,23 @@ export interface Position {
   entryPrice: bigint;
   openedAt: bigint;
   status: number; // 0 = OPEN, 1 = CLOSED, 2 = LIQUIDATED, 3 = SETTLED, 4 = CLAIMED
-  accumulatedFunding: bigint;
-  lastFundingTimestamp: bigint;
+}
+
+// Helper to parse position tuple from contract
+function parsePositionTuple(data: readonly [bigint, string, string, bigint, bigint, bigint, bigint, bigint, bigint, bigint] | undefined): Position | undefined {
+  if (!data) return undefined;
+  return {
+    id: data[0],
+    user: data[1],
+    market: data[2],
+    direction: (Number(data[3]) === 0 ? 0 : 1) as 0 | 1,
+    collateralUSD: data[4],
+    leverage: data[5],
+    positionSize: data[6],
+    entryPrice: data[7],
+    openedAt: data[8],
+    status: Number(data[9]),
+  };
 }
 
 export interface PositionWithDetails extends Position {
@@ -53,7 +68,7 @@ export function useUserPositions() {
 }
 
 export function usePosition(positionId: bigint | undefined) {
-  const { data: position, refetch } = useReadContract({
+  const { data: positionData, refetch } = useReadContract({
     address: config.contracts.positionManager as `0x${string}`,
     abi: PositionManagerABI,
     functionName: 'getPosition',
@@ -63,8 +78,13 @@ export function usePosition(positionId: bigint | undefined) {
     },
   });
 
+  // Parse tuple result into Position object
+  const position = useMemo(() => {
+    return parsePositionTuple(positionData as readonly [bigint, string, string, bigint, bigint, bigint, bigint, bigint, bigint, bigint] | undefined);
+  }, [positionData]);
+
   return {
-    position: position as Position | undefined,
+    position,
     refetch,
   };
 }

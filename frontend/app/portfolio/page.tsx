@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { formatUSD, formatNumber } from "@/lib/utils";
 import { Wallet, TrendingUp, TrendingDown, Shield, DollarSign } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAccount } from "wagmi";
 import { useVaultBalance, useTokenBalance, useApproveToken, useDepositCollateral, useWithdrawCollateral } from "@/hooks/useVault";
 import { config } from "@/lib/config";
@@ -19,11 +19,11 @@ export default function PortfolioPage() {
   const [withdrawAmount, setWithdrawAmount] = useState("");
 
   // Get real vault data
-  const { availableCollateral, totalCollateral, lockedCollateral } = useVaultBalance();
-  const { balance: walletBalance } = useTokenBalance(config.contracts.usdc);
-  const { approve, isPending: isApproving, isSuccess: isApproved } = useApproveToken();
+  const { availableCollateral, totalCollateral, lockedCollateral, refetch: refetchVault } = useVaultBalance();
+  const { balance: walletBalance, allowance, refetch: refetchTokenBalance } = useTokenBalance(config.contracts.usdc);
+  const { approve, isPending: isApproving, isSuccess: approveSuccess, error: approveError } = useApproveToken();
   const { deposit, isPending: isDepositing, isSuccess: isDepositSuccess } = useDepositCollateral();
-  const { withdraw, isPending: isWithdrawing } = useWithdrawCollateral();
+  const { withdraw, isPending: isWithdrawing, isSuccess: isWithdrawSuccess } = useWithdrawCollateral();
 
   // Get cross-margin account data (includes equity which accounts for unrealized PnL)
   const { equity, marginUsed, isLoading: crossMarginLoading } = useCrossMarginAccount();
@@ -37,16 +37,44 @@ export default function PortfolioPage() {
   const totalPnLPercent = totalCollateral > 0 ? (totalPnL / totalCollateral) * 100 : 0;
   const isPnLPositive = totalPnL >= 0;
 
+  // Check if current deposit amount is already approved
+  const depositAmountNum = parseFloat(depositAmount || '0');
+  const hasEnoughAllowance = allowance >= depositAmountNum && depositAmountNum > 0;
+
   const handleApprove = () => {
-    const amount = parseFloat(depositAmount || '0');
-    if (amount <= 0) {
+    if (depositAmountNum <= 0) {
       alert('Please enter a valid amount');
       return;
     }
-    // Approve max amount (or specific amount)
-    const amountBigInt = BigInt(Math.floor(amount * 1e6)); // USDC has 6 decimals
-    approve(config.contracts.usdc, amountBigInt);
+    // Approve 10x the requested amount for convenience (some contracts don't like max uint256)
+    const approvalAmount = BigInt(Math.floor(depositAmountNum * 10 * 1e6)); // 10x amount in USDC decimals
+    approve(config.contracts.usdc, approvalAmount);
   };
+
+  // Refetch allowance after successful approve
+  useEffect(() => {
+    if (approveSuccess) {
+      refetchTokenBalance();
+    }
+  }, [approveSuccess, refetchTokenBalance]);
+
+  // Refetch balances after successful deposit
+  useEffect(() => {
+    if (isDepositSuccess) {
+      refetchVault();
+      refetchTokenBalance();
+      setDepositAmount("");
+    }
+  }, [isDepositSuccess, refetchVault, refetchTokenBalance]);
+
+  // Refetch balances after successful withdraw
+  useEffect(() => {
+    if (isWithdrawSuccess) {
+      refetchVault();
+      refetchTokenBalance();
+      setWithdrawAmount("");
+    }
+  }, [isWithdrawSuccess, refetchVault, refetchTokenBalance]);
 
   const handleDeposit = () => {
     const amount = parseFloat(depositAmount || '0');
@@ -60,11 +88,6 @@ export default function PortfolioPage() {
     }
     const amountBigInt = BigInt(Math.floor(amount * 1e6)); // USDC has 6 decimals
     deposit(config.contracts.usdc, amountBigInt);
-    
-    // Clear input on success
-    if (isDepositSuccess) {
-      setDepositAmount("");
-    }
   };
 
   const handleWithdraw = () => {
@@ -79,9 +102,6 @@ export default function PortfolioPage() {
     }
     const amountBigInt = BigInt(Math.floor(amount * 1e6)); // USDC has 6 decimals
     withdraw(config.contracts.usdc, amountBigInt);
-    
-    // Clear input
-    setWithdrawAmount("");
   };
 
   return (
@@ -180,24 +200,26 @@ export default function PortfolioPage() {
                 </div>
               </div>
 
-              <Button 
-                fullWidth 
-                variant="primary" 
-                size="lg"
-                onClick={handleApprove}
-                disabled={!isConnected || isApproving || parseFloat(depositAmount || '0') <= 0}
-              >
-                {isApproving ? 'Approving...' : isApproved ? 'Approved ✓' : 'Approve USDC'}
-              </Button>
+              {!hasEnoughAllowance && (
+                <Button
+                  fullWidth
+                  variant="primary"
+                  size="lg"
+                  onClick={handleApprove}
+                  disabled={!isConnected || isApproving || depositAmountNum <= 0}
+                >
+                  {isApproving ? 'Approving...' : 'Approve USDC'}
+                </Button>
+              )}
 
-              <Button 
-                fullWidth 
-                variant="secondary" 
-                size="lg" 
+              <Button
+                fullWidth
+                variant={hasEnoughAllowance ? "primary" : "secondary"}
+                size="lg"
                 onClick={handleDeposit}
-                disabled={!isConnected || isDepositing || !isApproved || parseFloat(depositAmount || '0') <= 0}
+                disabled={!isConnected || isDepositing || !hasEnoughAllowance}
               >
-                {isDepositing ? 'Depositing...' : 'Deposit to Vault'}
+                {isDepositing ? 'Depositing...' : hasEnoughAllowance ? 'Deposit to Vault' : 'Enter amount & approve first'}
               </Button>
 
               {!isConnected && (
@@ -256,24 +278,49 @@ export default function PortfolioPage() {
           </Card>
         </div>
 
-        {/* Faucet */}
+        {/* Get Test USDC */}
         <Card className="mt-6">
           <CardHeader>
-            <CardTitle>Testnet Faucet</CardTitle>
+            <CardTitle>Get Test USDC</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">
-                  Get test USDC for trading (10,000 USDC per call)
-                </p>
-              </div>
-              <Button>
-                Claim Test USDC
-              </Button>
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              To get test USDC on Arbitrum Sepolia, use Circle&apos;s official faucet:
+            </p>
+            <div className="flex flex-col gap-2">
+              <a
+                href="https://faucet.circle.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center justify-center px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              >
+                Circle USDC Faucet →
+              </a>
+              <p className="text-xs text-muted-foreground">
+                Select &quot;Arbitrum Sepolia&quot; and enter your wallet address to receive test USDC
+              </p>
+            </div>
+            <div className="pt-2 border-t border-border">
+              <p className="text-xs text-muted-foreground">
+                <strong>USDC Contract:</strong>{' '}
+                <code className="text-xs bg-secondary px-1 py-0.5 rounded">
+                  {config.contracts.usdc}
+                </code>
+              </p>
             </div>
           </CardContent>
         </Card>
+
+        {/* Error Display */}
+        {approveError && (
+          <Card className="mt-6 border-error">
+            <CardContent className="p-4">
+              <p className="text-sm text-error">
+                Approve Error: {approveError.message || 'Transaction failed'}
+              </p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );

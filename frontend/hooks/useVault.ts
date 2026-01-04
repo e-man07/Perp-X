@@ -8,27 +8,18 @@ import { ERC20ABI } from '@/lib/abis/ERC20';
 export function useVaultBalance() {
   const { address } = useAccount();
 
-  const { data: availableCollateral, refetch: refetchAvailable } = useReadContract({
+  // Query raw USDC balance in vault (getCollateralBalance works, getCollateralValueUSD needs oracle)
+  const { data: usdcBalance, refetch: refetchUsdcBalance } = useReadContract({
     address: config.contracts.vault as `0x${string}`,
     abi: CollateralVaultABI,
-    functionName: 'getAvailableCollateralUSD',
-    args: address ? [address] : undefined,
+    functionName: 'getCollateralBalance',
+    args: address ? [address, config.contracts.usdc as `0x${string}`] : undefined,
     query: {
       enabled: !!address,
     },
   });
 
-  const { data: totalCollateral, refetch: refetchTotal } = useReadContract({
-    address: config.contracts.vault as `0x${string}`,
-    abi: CollateralVaultABI,
-    functionName: 'getCollateralValueUSD',
-    args: address ? [address] : undefined,
-    query: {
-      enabled: !!address,
-    },
-  });
-
-  const { data: lockedCollateral, refetch: refetchLocked } = useReadContract({
+  const { data: lockedCollateralRaw, refetch: refetchLocked } = useReadContract({
     address: config.contracts.vault as `0x${string}`,
     abi: CollateralVaultABI,
     functionName: 'lockedCollateral',
@@ -38,13 +29,17 @@ export function useVaultBalance() {
     },
   });
 
+  // For USDC, 1 USDC = $1 (stablecoin), so raw balance / 1e6 = USD value
+  const totalCollateral = usdcBalance ? Number(usdcBalance) / 1e6 : 0;
+  const lockedCollateral = lockedCollateralRaw ? Number(lockedCollateralRaw) / 1e18 : 0;
+  const availableCollateral = Math.max(0, totalCollateral - lockedCollateral);
+
   return {
-    availableCollateral: availableCollateral ? Number(availableCollateral) / 1e18 : 0,
-    totalCollateral: totalCollateral ? Number(totalCollateral) / 1e18 : 0,
-    lockedCollateral: lockedCollateral ? Number(lockedCollateral) / 1e18 : 0,
+    availableCollateral,
+    totalCollateral,
+    lockedCollateral,
     refetch: () => {
-      refetchAvailable();
-      refetchTotal();
+      refetchUsdcBalance();
       refetchLocked();
     },
   };
@@ -84,25 +79,59 @@ export function useTokenBalance(tokenAddress: string) {
 }
 
 export function useApproveToken() {
-  const { writeContract, data: hash, isPending } = useWriteContract();
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
   const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
     hash,
   });
 
   const approve = (tokenAddress: string, amount: bigint) => {
+    console.log('Approving token:', tokenAddress, 'amount:', amount.toString(), 'spender:', config.contracts.vault);
     writeContract({
       address: tokenAddress as `0x${string}`,
       abi: ERC20ABI,
       functionName: 'approve',
-      args: [config.contracts.vault, amount],
+      args: [config.contracts.vault as `0x${string}`, amount],
+      // Add explicit gas to avoid estimation issues
+      gas: BigInt(100000),
     });
   };
+
+  // Log errors
+  if (error) {
+    console.error('Approve error:', error);
+  }
 
   return {
     approve,
     isPending: isPending || isConfirming,
     isSuccess,
     hash,
+    error,
+  };
+}
+
+export function useFaucet() {
+  const { writeContract, data: hash, isPending, error } = useWriteContract();
+  const { isLoading: isConfirming, isSuccess } = useWaitForTransactionReceipt({
+    hash,
+  });
+
+  const claimFaucet = () => {
+    console.log('Claiming faucet from:', config.contracts.usdc);
+    writeContract({
+      address: config.contracts.usdc as `0x${string}`,
+      abi: ERC20ABI,
+      functionName: 'faucet',
+      args: [],
+    });
+  };
+
+  return {
+    claimFaucet,
+    isPending: isPending || isConfirming,
+    isSuccess,
+    hash,
+    error,
   };
 }
 
@@ -117,7 +146,7 @@ export function useDepositCollateral() {
       address: config.contracts.vault as `0x${string}`,
       abi: CollateralVaultABI,
       functionName: 'deposit',
-      args: [tokenAddress, amount],
+      args: [tokenAddress as `0x${string}`, amount],
     });
   };
 
@@ -140,7 +169,7 @@ export function useWithdrawCollateral() {
       address: config.contracts.vault as `0x${string}`,
       abi: CollateralVaultABI,
       functionName: 'withdraw',
-      args: [tokenAddress, amount],
+      args: [tokenAddress as `0x${string}`, amount],
     });
   };
 

@@ -4,8 +4,11 @@ import { useAccount, useReadContract } from 'wagmi';
 import { config } from '@/lib/config';
 import { CrossMarginABI } from '@/lib/abis/CrossMargin';
 
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+
 export function useAccountEquity() {
   const { address } = useAccount();
+  const crossMarginEnabled = (config.contracts.crossMargin as string) !== ZERO_ADDRESS;
 
   const { data: equity, refetch, isLoading } = useReadContract({
     address: config.contracts.crossMargin as `0x${string}`,
@@ -13,7 +16,7 @@ export function useAccountEquity() {
     functionName: 'getAccountEquity',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && config.contracts.crossMargin !== "0x0000000000000000000000000000000000000000",
+      enabled: !!address && crossMarginEnabled,
       refetchInterval: 10000
     },
   });
@@ -28,6 +31,7 @@ export function useAccountEquity() {
 
 export function useMarginUsed() {
   const { address } = useAccount();
+  const crossMarginEnabled = (config.contracts.crossMargin as string) !== ZERO_ADDRESS;
 
   const { data: marginUsed, refetch, isLoading } = useReadContract({
     address: config.contracts.crossMargin as `0x${string}`,
@@ -35,7 +39,7 @@ export function useMarginUsed() {
     functionName: 'getMarginUsed',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && config.contracts.crossMargin !== "0x0000000000000000000000000000000000000000"
+      enabled: !!address && crossMarginEnabled
     },
   });
 
@@ -49,6 +53,7 @@ export function useMarginUsed() {
 
 export function useAvailableMargin() {
   const { address } = useAccount();
+  const crossMarginEnabled = (config.contracts.crossMargin as string) !== ZERO_ADDRESS;
 
   const { data: availableMargin, refetch, isLoading } = useReadContract({
     address: config.contracts.crossMargin as `0x${string}`,
@@ -56,7 +61,7 @@ export function useAvailableMargin() {
     functionName: 'getAvailableMargin',
     args: address ? [address] : undefined,
     query: {
-      enabled: !!address && config.contracts.crossMargin !== "0x0000000000000000000000000000000000000000",
+      enabled: !!address && crossMarginEnabled,
       refetchInterval: 10000
     },
   });
@@ -71,6 +76,7 @@ export function useAvailableMargin() {
 
 export function useAccountHealth(minMarginRatioBps: bigint = BigInt(1000)) {
   const { address } = useAccount();
+  const crossMarginEnabled = (config.contracts.crossMargin as string) !== ZERO_ADDRESS;
 
   const { data: isHealthy, isLoading } = useReadContract({
     address: config.contracts.crossMargin as `0x${string}`,
@@ -78,7 +84,7 @@ export function useAccountHealth(minMarginRatioBps: bigint = BigInt(1000)) {
     functionName: 'isAccountHealthy',
     args: address ? [address, minMarginRatioBps] : undefined,
     query: {
-      enabled: !!address && config.contracts.crossMargin !== "0x0000000000000000000000000000000000000000",
+      enabled: !!address && crossMarginEnabled,
       refetchInterval: 5000
     },
   });

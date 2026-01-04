@@ -67,6 +67,74 @@ export const OutcomeMarketABI = [
     "stateMutability": "view"
   },
   {
+    "type": "function",
+    "name": "closePositionPartial",
+    "inputs": [
+      { "name": "positionId", "type": "uint256" },
+      { "name": "closePercentage", "type": "uint256" }
+    ],
+    "outputs": [{ "name": "pnl", "type": "int256" }],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "claimSettlement",
+    "inputs": [{ "name": "positionId", "type": "uint256" }],
+    "outputs": [{ "name": "pnl", "type": "int256" }],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "settleMarket",
+    "inputs": [],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "isExpired",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "bool" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "isSettled",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "bool" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getExpiryTimestamp",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "settlementPrice",
+    "inputs": [],
+    "outputs": [{ "name": "", "type": "uint256" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "init",
+    "inputs": [
+      { "name": "positionManager", "type": "address" },
+      { "name": "collateralVault", "type": "address" },
+      { "name": "liquidationEngine", "type": "address" },
+      { "name": "priceAdapter", "type": "address" },
+      { "name": "pythPriceId", "type": "bytes32" },
+      { "name": "assetPair", "type": "string" },
+      { "name": "expiryDuration", "type": "uint256" },
+      { "name": "maxOpenInterest", "type": "uint256" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
     "type": "event",
     "name": "PositionOpened",
     "inputs": [

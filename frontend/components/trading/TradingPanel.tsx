@@ -165,9 +165,9 @@ export function TradingPanel({ market }: TradingPanelProps) {
     if (isApproved && pendingPosition && !isApproving && !isOpeningPosition) {
       console.log('Wallet approval confirmed! Opening position on contract...');
 
-      // Convert to contract format (18 decimals for collateral/leverage)
+      // Convert to contract format (18 decimals for collateral, leverage as-is 1-40)
       const collateralBigInt = BigInt(Math.floor(pendingPosition.amount * 1e18));
-      const leverageBigInt = BigInt(pendingPosition.leverage * 100); // Leverage in basis points (100 = 1x)
+      const leverageBigInt = BigInt(pendingPosition.leverage); // Leverage 1-40 (contract expects simple number)
 
       openPosition(
         marketAddress,
@@ -249,7 +249,7 @@ export function TradingPanel({ market }: TradingPanelProps) {
       // Already approved, open position directly
       console.log('Already approved, opening position directly...');
       const collateralBigInt = BigInt(Math.floor(collateralAmount * 1e18));
-      const leverageBigInt = BigInt(leverage * 100); // Leverage in basis points
+      const leverageBigInt = BigInt(leverage); // Leverage 1-40 (contract expects simple number)
 
       openPosition(
         marketAddress,

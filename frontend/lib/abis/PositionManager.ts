@@ -4,24 +4,16 @@ export const PositionManagerABI = [
     "name": "getPosition",
     "inputs": [{ "name": "positionId", "type": "uint256" }],
     "outputs": [
-      {
-        "components": [
-          { "name": "id", "type": "uint256" },
-          { "name": "user", "type": "address" },
-          { "name": "market", "type": "address" },
-          { "name": "direction", "type": "uint8" },
-          { "name": "collateralUSD", "type": "uint256" },
-          { "name": "leverage", "type": "uint256" },
-          { "name": "positionSize", "type": "uint256" },
-          { "name": "entryPrice", "type": "uint256" },
-          { "name": "openedAt", "type": "uint256" },
-          { "name": "status", "type": "uint8" },
-          { "name": "accumulatedFunding", "type": "int256" },
-          { "name": "lastFundingTimestamp", "type": "uint256" }
-        ],
-        "name": "",
-        "type": "tuple"
-      }
+      { "name": "id", "type": "uint256" },
+      { "name": "user", "type": "address" },
+      { "name": "market", "type": "address" },
+      { "name": "direction", "type": "uint256" },
+      { "name": "collateralUSD", "type": "uint256" },
+      { "name": "leverage", "type": "uint256" },
+      { "name": "positionSize", "type": "uint256" },
+      { "name": "entryPrice", "type": "uint256" },
+      { "name": "openedAt", "type": "uint256" },
+      { "name": "status", "type": "uint256" }
     ],
     "stateMutability": "view"
   },
@@ -90,6 +82,68 @@ export const PositionManagerABI = [
       { "name": "positionId", "type": "uint256" },
       { "name": "currentPrice", "type": "uint256" }
     ],
+    "outputs": [{ "name": "", "type": "uint256" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "createPosition",
+    "inputs": [
+      { "name": "user", "type": "address" },
+      { "name": "market", "type": "address" },
+      { "name": "direction", "type": "uint8" },
+      { "name": "collateralUsd", "type": "uint256" },
+      { "name": "leverage", "type": "uint256" },
+      { "name": "entryPrice", "type": "uint256" }
+    ],
+    "outputs": [{ "name": "positionId", "type": "uint256" }],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "authorizeMarket",
+    "inputs": [
+      { "name": "market", "type": "address" },
+      { "name": "authorized", "type": "bool" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "updatePositionStatus",
+    "inputs": [
+      { "name": "positionId", "type": "uint256" },
+      { "name": "newStatus", "type": "uint8" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "updatePositionSize",
+    "inputs": [
+      { "name": "positionId", "type": "uint256" },
+      { "name": "newCollateral", "type": "uint256" },
+      { "name": "newSize", "type": "uint256" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "isMarginBelowMaintenance",
+    "inputs": [
+      { "name": "positionId", "type": "uint256" },
+      { "name": "currentPrice", "type": "uint256" }
+    ],
+    "outputs": [{ "name": "", "type": "bool" }],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "getNextPositionId",
+    "inputs": [],
     "outputs": [{ "name": "", "type": "uint256" }],
     "stateMutability": "view"
   },

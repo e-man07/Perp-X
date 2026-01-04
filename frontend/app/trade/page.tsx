@@ -7,6 +7,7 @@ import { PriceChart } from "@/components/trading/PriceChart";
 import { OrderBook } from "@/components/trading/OrderBook";
 import { TradingPanel } from "@/components/trading/TradingPanel";
 import { PositionsPanel } from "@/components/trading/PositionsPanel";
+import { useCoinGeckoPrice } from "@/hooks/useCoinGecko";
 import { config } from "@/lib/config";
 
 export default function TradePage() {
@@ -18,15 +19,18 @@ export default function TradePage() {
     expiryHours: 24,
   });
 
+  // Get real-time price from CoinGecko for OrderBook
+  const { price: currentPrice } = useCoinGeckoPrice(selectedMarket.name);
+
   return (
     <div className="min-h-screen">
       <Header />
-      
+
       <div className="container mx-auto px-4 py-6">
         {/* Market Selector */}
-        <MarketSelector 
-          selectedMarket={selectedMarket} 
-          onSelectMarket={setSelectedMarket} 
+        <MarketSelector
+          selectedMarket={selectedMarket}
+          onSelectMarket={setSelectedMarket}
         />
 
         {/* Main Trading Grid */}
@@ -43,7 +47,7 @@ export default function TradePage() {
           {/* Right Column - Order Book & Trading */}
           <div className="col-span-12 lg:col-span-3 space-y-4">
             {/* Order Book */}
-            <OrderBook market={selectedMarket.name} />
+            <OrderBook market={selectedMarket.name} currentPrice={currentPrice} />
 
             {/* Trading Panel */}
             <TradingPanel market={selectedMarket.address} />
