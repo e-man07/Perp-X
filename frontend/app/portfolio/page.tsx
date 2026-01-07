@@ -12,6 +12,8 @@ import { useVaultBalance, useTokenBalance, useApproveToken, useDepositCollateral
 import { config } from "@/lib/config";
 import { useUserPositions } from "@/hooks/usePositions";
 import { useCrossMarginAccount } from "@/hooks/useCrossMargin";
+import { useSupportedTokens } from "@/hooks/useSupportedTokens";
+import { VaultDiagnostics } from "@/components/VaultDiagnostics";
 
 export default function PortfolioPage() {
   const { address, isConnected } = useAccount();
@@ -20,13 +22,16 @@ export default function PortfolioPage() {
 
   // Get real vault data
   const { availableCollateral, totalCollateral, lockedCollateral, refetch: refetchVault } = useVaultBalance();
-  const { balance: walletBalance, allowance, refetch: refetchTokenBalance } = useTokenBalance(config.contracts.usdc);
-  const { approve, isPending: isApproving, isSuccess: approveSuccess, error: approveError } = useApproveToken();
-  const { deposit, isPending: isDepositing, isSuccess: isDepositSuccess } = useDepositCollateral();
+  const { balance: walletBalance, allowance, isSupported: isTokenSupported, refetch: refetchTokenBalance } = useTokenBalance(config.contracts.usdc);
+  const { approve, isPending: isApproving, isSuccess: approveSuccess, error: approveError, hash: approveHash } = useApproveToken();
+  const { deposit, isPending: isDepositing, isSuccess: isDepositSuccess, error: depositError, hash: depositHash } = useDepositCollateral();
   const { withdraw, isPending: isWithdrawing, isSuccess: isWithdrawSuccess } = useWithdrawCollateral();
 
   // Get cross-margin account data (includes equity which accounts for unrealized PnL)
   const { equity, marginUsed, isLoading: crossMarginLoading } = useCrossMarginAccount();
+
+  // Get supported tokens
+  const { supportedTokens, allTokens, isLoading: isLoadingSupportedTokens } = useSupportedTokens();
 
   // Calculate total PnL from all positions
   const { positionIds } = useUserPositions();
@@ -41,20 +46,60 @@ export default function PortfolioPage() {
   const depositAmountNum = parseFloat(depositAmount || '0');
   const hasEnoughAllowance = allowance >= depositAmountNum && depositAmountNum > 0;
 
-  const handleApprove = () => {
+  // Log allowance changes for debugging
+  useEffect(() => {
+    console.log('Allowance check:', {
+      allowance,
+      depositAmountNum,
+      hasEnoughAllowance,
+      approveSuccess,
+    });
+  }, [allowance, depositAmountNum, hasEnoughAllowance, approveSuccess]);
+
+  const handleApprove = async () => {
     if (depositAmountNum <= 0) {
       alert('Please enter a valid amount');
       return;
     }
-    // Approve 10x the requested amount for convenience (some contracts don't like max uint256)
-    const approvalAmount = BigInt(Math.floor(depositAmountNum * 10 * 1e6)); // 10x amount in USDC decimals
-    approve(config.contracts.usdc, approvalAmount);
+
+    // Check if user has enough balance
+    if (walletBalance < depositAmountNum) {
+      alert(`Insufficient balance. You have ${walletBalance.toFixed(6)} USDC but need ${depositAmountNum.toFixed(6)} USDC`);
+      return;
+    }
+
+    try {
+      // For small amounts (like 1 USDC), approve exactly what's needed
+      // For larger amounts, add a small buffer (10%) for convenience
+      const approvalMultiplier = depositAmountNum >= 10 ? 1.1 : 1.0; // Only add buffer for amounts >= 10 USDC
+      const approvalAmount = BigInt(Math.floor(depositAmountNum * approvalMultiplier * 1e6));
+      
+      console.log('Attempting approval:', {
+        depositAmount: depositAmountNum,
+        walletBalance: walletBalance,
+        approvalAmount: approvalAmount.toString(),
+        approvalAmountUSDC: (Number(approvalAmount) / 1e6).toFixed(6),
+        multiplier: approvalMultiplier,
+        token: config.contracts.usdc,
+        vault: config.contracts.vault,
+      });
+      await approve(config.contracts.usdc, approvalAmount);
+    } catch (err: any) {
+      console.error('Approval failed:', err);
+      alert(`Approval failed: ${err?.message || 'Unknown error. Please check console for details.'}`);
+    }
   };
 
   // Refetch allowance after successful approve
   useEffect(() => {
     if (approveSuccess) {
+      console.log('✅ Approval successful! Refetching token balance and allowance...');
       refetchTokenBalance();
+      // Small delay to ensure the refetch completes before checking allowance
+      setTimeout(() => {
+        refetchTokenBalance();
+        console.log('✓ Token balance and allowance refetched');
+      }, 1000);
     }
   }, [approveSuccess, refetchTokenBalance]);
 
@@ -76,7 +121,7 @@ export default function PortfolioPage() {
     }
   }, [isWithdrawSuccess, refetchVault, refetchTokenBalance]);
 
-  const handleDeposit = () => {
+  const handleDeposit = async () => {
     const amount = parseFloat(depositAmount || '0');
     if (amount <= 0) {
       alert('Please enter a valid amount');
@@ -86,8 +131,17 @@ export default function PortfolioPage() {
       alert(`Insufficient balance. Wallet: ${walletBalance.toFixed(2)} USDC`);
       return;
     }
-    const amountBigInt = BigInt(Math.floor(amount * 1e6)); // USDC has 6 decimals
-    deposit(config.contracts.usdc, amountBigInt);
+    if (!hasEnoughAllowance) {
+      alert('Insufficient allowance. Please approve first.');
+      return;
+    }
+    try {
+      const amountBigInt = BigInt(Math.floor(amount * 1e6)); // USDC has 6 decimals
+      await deposit(config.contracts.usdc, amountBigInt);
+    } catch (err: any) {
+      console.error('Deposit failed:', err);
+      alert(`Deposit failed: ${err?.message || 'Unknown error. Please check console for details.'}`);
+    }
   };
 
   const handleWithdraw = () => {
@@ -181,6 +235,22 @@ export default function PortfolioPage() {
               <CardTitle>Deposit Collateral</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Token Support Warning */}
+              {!isTokenSupported && (
+                <div className="p-3 bg-warning/20 border border-warning rounded-md text-sm">
+                  <p className="text-warning font-semibold mb-1">⚠️ USDC Not Supported</p>
+                  <p className="text-xs text-warning/80 mb-2">
+                    USDC has not been added as a supported collateral token in the vault.
+                  </p>
+                  <p className="text-xs text-warning/80">
+                    The vault owner needs to call <code className="bg-warning/20 px-1 rounded">addSupportedToken()</code> to enable deposits.
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Vault: <code className="text-xs">{config.contracts.vault}</code>
+                  </p>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="text-sm text-muted-foreground">Amount (USDC)</label>
                 <Input
@@ -188,19 +258,73 @@ export default function PortfolioPage() {
                   value={depositAmount}
                   onChange={(e) => setDepositAmount(e.target.value)}
                   placeholder="0.00"
+                  disabled={!isTokenSupported}
                 />
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                   <span>Wallet: {formatUSD(walletBalance)}</span>
-                  <button 
-                    onClick={() => setDepositAmount(walletBalance.toString())}
-                    className="text-white hover:underline"
-                  >
-                    Max
-                  </button>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={() => {
+                        console.log('Manual refresh triggered');
+                        refetchTokenBalance();
+                      }}
+                      className="text-white hover:underline"
+                      title="Refresh allowance and token support status"
+                    >
+                      🔄
+                    </button>
+                    <button 
+                      onClick={() => setDepositAmount(walletBalance.toString())}
+                      className="text-white hover:underline"
+                      disabled={!isTokenSupported}
+                    >
+                      Max
+                    </button>
+                  </div>
                 </div>
               </div>
 
-              {!hasEnoughAllowance && (
+              {/* Approval Transaction Status */}
+              {approveHash && (
+                <div className="p-3 bg-secondary rounded-md text-sm">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-muted-foreground">Approval Transaction</span>
+                    <a
+                      href={`https://sepolia.arbiscan.io/tx/${approveHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline text-xs"
+                    >
+                      View on Arbiscan →
+                    </a>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {isApproving ? '⏳ Waiting for confirmation...' : approveSuccess ? '✅ Approved!' : 'Pending...'}
+                  </div>
+                </div>
+              )}
+
+              {/* Deposit Transaction Status */}
+              {depositHash && (
+                <div className="p-3 bg-secondary rounded-md text-sm">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-muted-foreground">Deposit Transaction</span>
+                    <a
+                      href={`https://sepolia.arbiscan.io/tx/${depositHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline text-xs"
+                    >
+                      View on Arbiscan →
+                    </a>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {isDepositing ? '⏳ Waiting for confirmation...' : isDepositSuccess ? '✅ Deposited!' : 'Pending...'}
+                  </div>
+                </div>
+              )}
+
+              {!hasEnoughAllowance && isTokenSupported && (
                 <Button
                   fullWidth
                   variant="primary"
@@ -214,13 +338,25 @@ export default function PortfolioPage() {
 
               <Button
                 fullWidth
-                variant={hasEnoughAllowance ? "primary" : "secondary"}
+                variant={hasEnoughAllowance && isTokenSupported ? "primary" : "secondary"}
                 size="lg"
                 onClick={handleDeposit}
-                disabled={!isConnected || isDepositing || !hasEnoughAllowance}
+                disabled={!isConnected || isDepositing || !hasEnoughAllowance || !isTokenSupported}
               >
-                {isDepositing ? 'Depositing...' : hasEnoughAllowance ? 'Deposit to Vault' : 'Enter amount & approve first'}
+                {isDepositing ? 'Depositing...' : 
+                 !isTokenSupported ? 'Token Not Supported' :
+                 hasEnoughAllowance ? 'Deposit to Vault' : 'Enter amount & approve first'}
               </Button>
+
+              {/* Debug info in development */}
+              {process.env.NODE_ENV === 'development' && (
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <div>Allowance: {allowance.toFixed(6)} USDC</div>
+                  <div>Needed: {depositAmountNum.toFixed(6)} USDC</div>
+                  <div>Has Enough: {hasEnoughAllowance ? 'Yes' : 'No'}</div>
+                  <div>Approve Success: {approveSuccess ? 'Yes' : 'No'}</div>
+                </div>
+              )}
 
               {!isConnected && (
                 <div className="text-xs text-center text-muted-foreground">
@@ -278,6 +414,73 @@ export default function PortfolioPage() {
           </Card>
         </div>
 
+        {/* Supported Tokens */}
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Supported Collateral Tokens</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {isLoadingSupportedTokens ? (
+              <p className="text-sm text-muted-foreground">Loading supported tokens...</p>
+            ) : supportedTokens.length === 0 ? (
+              <div className="space-y-2">
+                <p className="text-sm text-warning font-semibold">⚠️ No tokens are currently supported</p>
+                <p className="text-xs text-muted-foreground">
+                  The vault owner needs to call <code className="bg-secondary px-1 py-0.5 rounded">addSupportedToken()</code> to enable deposits.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  <strong>Vault:</strong>{' '}
+                  <code className="text-xs bg-secondary px-1 py-0.5 rounded">
+                    {config.contracts.vault}
+                  </code>
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground mb-3">
+                  The following tokens are supported as collateral:
+                </p>
+                <div className="space-y-2">
+                  {supportedTokens.map((token) => (
+                    <div
+                      key={token.address}
+                      className="p-3 bg-secondary rounded-md flex items-center justify-between"
+                    >
+                      <div>
+                        <div className="font-semibold">{token.symbol}</div>
+                        <div className="text-xs text-muted-foreground">{token.name}</div>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-xs text-success font-semibold">✓ Supported</div>
+                        <div className="text-xs text-muted-foreground font-mono">
+                          {token.address.slice(0, 6)}...{token.address.slice(-4)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {allTokens.some((token) => !token.isSupported && !token.isLoading) && (
+                  <div className="pt-2 border-t border-border">
+                    <p className="text-xs text-muted-foreground mb-2">Not supported:</p>
+                    <div className="space-y-1">
+                      {allTokens
+                        .filter((token) => !token.isSupported && !token.isLoading)
+                        .map((token) => (
+                          <div key={token.address} className="text-xs text-muted-foreground">
+                            {token.symbol}: <code className="text-xs">{token.address}</code>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Vault Diagnostics */}
+        <VaultDiagnostics />
+
         {/* Get Test USDC */}
         <Card className="mt-6">
           <CardHeader>
@@ -312,12 +515,55 @@ export default function PortfolioPage() {
         </Card>
 
         {/* Error Display */}
-        {approveError && (
+        {(approveError || depositError) && (
           <Card className="mt-6 border-error">
             <CardContent className="p-4">
-              <p className="text-sm text-error">
-                Approve Error: {approveError.message || 'Transaction failed'}
-              </p>
+              {approveError && (
+                <div className="mb-4">
+                  <p className="text-sm font-semibold text-error mb-2">
+                    Approval Failed
+                  </p>
+                  <p className="text-xs text-error/80 mb-2">
+                    {approveError.message || 'Transaction failed'}
+                  </p>
+                </div>
+              )}
+              {depositError && (
+                <div>
+                  <p className="text-sm font-semibold text-error mb-2">
+                    Deposit Failed
+                  </p>
+                  <p className="text-xs text-error/80 mb-2">
+                    {depositError.message || 'Transaction failed'}
+                  </p>
+                </div>
+              )}
+              {(approveError?.message?.includes('Internal JSON-RPC error') || depositError?.message?.includes('Internal JSON-RPC error')) && (
+                <div className="text-xs text-muted-foreground space-y-1 mt-3">
+                  <p><strong>Possible causes:</strong></p>
+                  <ul className="list-disc list-inside space-y-1 ml-2">
+                    <li>RPC endpoint may be experiencing issues</li>
+                    <li>Contract might be paused or have restrictions</li>
+                    <li>Insufficient gas or network congestion</li>
+                    <li>Transaction would revert (check allowance, balance, or contract state)</li>
+                    <li>Try refreshing the page or switching networks</li>
+                  </ul>
+                  <div className="mt-3 pt-2 border-t border-border/50">
+                    <p><strong>USDC:</strong> {config.contracts.usdc}</p>
+                    <p><strong>Vault:</strong> {config.contracts.vault}</p>
+                    <p className="mt-2">
+                      <a
+                        href={`https://sepolia.arbiscan.io/address/${config.contracts.vault}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        View Vault on Arbiscan →
+                      </a>
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}

@@ -59,8 +59,8 @@ export const config = {
     rpcUrls: {
       default: {
         http: [
-          "https://arb-sepolia.g.alchemy.com/v2/lfzFRKcsu0i6H8DvmG3jPH9-E8GnaGop",
-          "https://sepolia-rollup.arbitrum.io/rpc", // Fallback public RPC
+          "https://sepolia-rollup.arbitrum.io/rpc", // Public RPC first (more reliable)
+          "https://arb-sepolia.g.alchemy.com/v2/lfzFRKcsu0i6H8DvmG3jPH9-E8GnaGop", // Alchemy fallback
         ]
       },
       public: {
