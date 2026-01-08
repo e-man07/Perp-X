@@ -17,7 +17,7 @@ export const config = {
     usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // Circle USDC (6 decimals)
     markets: {
       btc: {
-        micro: "0xe5c416f4d00359a23e9623f83d48342092d74b3e", // 24h BTC market (NEW)
+        micro: "0x8ff707bf5b4ea61ae1300c68e0333ded221cdd2f", // 24h BTC market (redeployed with new vault)
         daily: "0x0000000000000000000000000000000000000000", // 7d BTC market
         macro: "0x0000000000000000000000000000000000000000", // 30d BTC market
       },
