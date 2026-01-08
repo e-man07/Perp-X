@@ -174,7 +174,7 @@ export function VaultDiagnostics() {
         // 7. Try to simulate the deposit call to see actual revert reason
         try {
           const testAmount = BigInt(1000000); // 1 USDC
-          const { simulateContract, encodeFunctionData } = await import('viem');
+          const { encodeFunctionData } = await import('viem');
           const result = await publicClient.simulateContract({
             account: address as `0x${string}`,
             address: config.contracts.vault as `0x${string}`,

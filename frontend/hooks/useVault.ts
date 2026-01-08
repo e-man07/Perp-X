@@ -141,7 +141,7 @@ export function useApproveToken() {
       if (!tokenAddress || tokenAddress === '0x0000000000000000000000000000000000000000') {
         throw new Error('Invalid token address');
       }
-      if (amount <= 0n) {
+      if (amount <= BigInt(0)) {
         throw new Error('Approval amount must be greater than 0');
       }
 
@@ -444,7 +444,7 @@ export function useDepositCollateral() {
       if (!tokenAddress || tokenAddress === '0x0000000000000000000000000000000000000000') {
         throw new Error('Invalid token address');
       }
-      if (amount <= 0n) {
+      if (amount <= BigInt(0)) {
         throw new Error('Deposit amount must be greater than 0');
       }
 
@@ -618,7 +618,6 @@ export function useDepositCollateral() {
       let simulation: any = null;
       if (publicClient && address) {
         try {
-          const { simulateContract } = await import('viem');
           simulation = await publicClient.simulateContract({
             account: address as `0x${string}`,
             address: config.contracts.vault as `0x${string}`,

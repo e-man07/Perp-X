@@ -12,6 +12,7 @@ import { useVaultBalance, useTokenBalance, useApproveToken, useDepositCollateral
 import { useMarketPrice, useMarketData } from '@/hooks/useMarketData';
 import { useUserPositions } from '@/hooks/usePositions';
 import { useCoinGeckoPrice } from '@/hooks/useCoinGecko';
+import { useUpdatePrice } from '@/hooks/useUpdatePrice';
 import { config } from '@/lib/config';
 import { Clock, TrendingUp, TrendingDown, AlertCircle, Wallet } from 'lucide-react';
 
@@ -90,10 +91,14 @@ export function TradingPanel({ market }: TradingPanelProps) {
   const { approve, isPending: isApproving, isSuccess: isApproved, hash: approveHash } = useApproveToken();
   const { deposit, isPending: isDepositing, isSuccess: isDepositSuccess, hash: depositHash } = useDepositCollateral();
   const { openPosition, isPending: isOpeningPosition, isSuccess: isPositionOpen, isError: isPositionError, error: positionError, errorMessage: positionErrorMessage, hash: positionHash } = useOpenPosition();
+  const { updatePriceCache, isPending: isUpdatingPrice, isSuccess: isPriceUpdated, isError: isPriceUpdateError, error: priceUpdateError, hash: priceUpdateHash, reset: resetPriceUpdate } = useUpdatePrice();
+
+  // State to track if we need to open position after price update
+  const [pendingPriceUpdate, setPendingPriceUpdate] = useState(false);
 
   // Track transaction status
-  const isPending = isApproving || isOpeningPosition || (transactionStartTime !== null && !isPositionOpen);
-  const transactionHash = positionHash || approveHash;
+  const isPending = isApproving || isOpeningPosition || isUpdatingPrice || (transactionStartTime !== null && !isPositionOpen);
+  const transactionHash = positionHash || approveHash || priceUpdateHash;
 
   // Refetch positions after successful position open
   useEffect(() => {
@@ -104,9 +109,54 @@ export function TradingPanel({ market }: TradingPanelProps) {
         setIsPositionCreated(false);
         setTransactionStartTime(null);
         setPendingPosition(null);
+        setPendingPriceUpdate(false);
+        resetPriceUpdate();
       }, 3000);
     }
-  }, [isPositionOpen, refetchPositions]);
+  }, [isPositionOpen, refetchPositions, resetPriceUpdate]);
+
+  // After price update succeeds, proceed with approval/position opening
+  useEffect(() => {
+    if (isPriceUpdated && pendingPriceUpdate && pendingPosition && !isUpdatingPrice) {
+      console.log('Price updated successfully! Proceeding with position opening...');
+      setPendingPriceUpdate(false);
+
+      // Get token address for approval
+      const tokenAddress = config.contracts.usdc;
+      const approveAmount = BigInt(Math.floor(pendingPosition.amount * 1e6)); // USDC has 6 decimals
+
+      // Check if approval is needed
+      const currentAllowance = allowance * 1e6; // Convert back to 6 decimals
+
+      if (currentAllowance < Number(approveAmount)) {
+        // Request approval first
+        console.log('Requesting wallet approval for amount:', Number(approveAmount));
+        approve(tokenAddress, approveAmount);
+      } else {
+        // Already approved, open position directly
+        console.log('Already approved, opening position directly...');
+        const collateralBigInt = BigInt(Math.floor(pendingPosition.amount * 1e18));
+        const leverageBigInt = BigInt(pendingPosition.leverage);
+
+        openPosition(
+          marketAddress,
+          pendingPosition.direction,
+          collateralBigInt,
+          leverageBigInt
+        );
+      }
+    }
+  }, [isPriceUpdated, pendingPriceUpdate, pendingPosition, isUpdatingPrice, allowance, approve, openPosition, marketAddress]);
+
+  // Handle price update errors
+  useEffect(() => {
+    if (isPriceUpdateError && pendingPriceUpdate) {
+      console.error('Price update failed:', priceUpdateError);
+      setPendingPriceUpdate(false);
+      setTransactionStartTime(null);
+      alert('Failed to update price. Only the contract owner can update prices. Please contact the admin.');
+    }
+  }, [isPriceUpdateError, pendingPriceUpdate, priceUpdateError]);
 
   // Calculate expiry info
   const expiry = expiryTimestamp ? Number(expiryTimestamp) : 0;
@@ -147,9 +197,11 @@ export function TradingPanel({ market }: TradingPanelProps) {
         setTransactionStartTime(null);
         setPendingDepositAmount(null);
         setPendingPosition(null);
+        setPendingPriceUpdate(false);
+        resetPriceUpdate();
       }
     }
-  }, [isPending, transactionStartTime]);
+  }, [isPending, transactionStartTime, resetPriceUpdate]);
 
   // After wallet approval succeeds, open real position on contract
   useEffect(() => {
@@ -190,7 +242,8 @@ export function TradingPanel({ market }: TradingPanelProps) {
       isPending,
       isExpired,
       side,
-      leverage
+      leverage,
+      coinGeckoPrice
     });
 
     if (!isConnected || !address) {
@@ -210,12 +263,13 @@ export function TradingPanel({ market }: TradingPanelProps) {
       return;
     }
 
+    if (coinGeckoPrice <= 0) {
+      alert('Unable to fetch current price from CoinGecko. Please try again.');
+      return;
+    }
+
     // Track transaction start time (for UI feedback)
     setTransactionStartTime(Date.now());
-
-    // Get token address for approval
-    const tokenAddress = config.contracts.usdc;
-    const approveAmount = BigInt(Math.floor(collateralAmount * 1e6)); // USDC has 6 decimals
 
     // Store pending position info
     setPendingPosition({
@@ -224,39 +278,19 @@ export function TradingPanel({ market }: TradingPanelProps) {
       leverage: leverage
     });
 
-    // Check if approval is needed
-    const currentAllowance = allowance * 1e6; // Convert back to 6 decimals
+    // First, update the price cache with CoinGecko's real-time price
+    console.log('Updating price cache with CoinGecko price:', coinGeckoPrice);
+    setPendingPriceUpdate(true);
 
-    console.log('Checking approval', {
-      currentAllowance,
-      approveAmount: Number(approveAmount),
-      needsApproval: currentAllowance < Number(approveAmount)
-    });
-
-    if (currentAllowance < Number(approveAmount)) {
-      // Request approval first
-      console.log('Requesting wallet approval for amount:', Number(approveAmount));
-      try {
-        approve(tokenAddress, approveAmount);
-        console.log('Wallet approval requested - waiting for user confirmation...');
-      } catch (error) {
-        console.error('Error requesting wallet approval:', error);
-        alert('Failed to request wallet approval. Please try again.');
-        setTransactionStartTime(null);
-        setPendingPosition(null);
-      }
-    } else {
-      // Already approved, open position directly
-      console.log('Already approved, opening position directly...');
-      const collateralBigInt = BigInt(Math.floor(collateralAmount * 1e18));
-      const leverageBigInt = BigInt(leverage); // Leverage 1-40 (contract expects simple number)
-
-      openPosition(
-        marketAddress,
-        side === 'long' ? 0 : 1,
-        collateralBigInt,
-        leverageBigInt
-      );
+    try {
+      updatePriceCache(marketName, coinGeckoPrice);
+      console.log('Price update transaction initiated - waiting for confirmation...');
+    } catch (error) {
+      console.error('Error initiating price update:', error);
+      alert('Failed to update price. Please try again.');
+      setTransactionStartTime(null);
+      setPendingPosition(null);
+      setPendingPriceUpdate(false);
     }
   };
 
@@ -595,14 +629,16 @@ export function TradingPanel({ market }: TradingPanelProps) {
           }}
           disabled={isPending || !isConnected || parseFloat(collateral || '0') <= 0 || isExpired}
         >
-          {isPending 
-            ? (isApproving 
-                ? 'Approving USDC...' 
+          {isPending
+            ? (isUpdatingPrice
+                ? 'Updating Price...'
+                : isApproving
+                ? 'Approving USDC...'
                 : 'Placing Prediction...')
             : isExpired
             ? 'Market Expired'
-            : side === 'long' 
-            ? 'Predict Price Goes UP' 
+            : side === 'long'
+            ? 'Predict Price Goes UP'
             : 'Predict Price Goes DOWN'}
         </Button>
 
@@ -638,6 +674,8 @@ export function TradingPanel({ market }: TradingPanelProps) {
                     setTransactionStartTime(null);
                     setPendingDepositAmount(null);
                     setPendingPosition(null);
+                    setPendingPriceUpdate(false);
+                    resetPriceUpdate();
                     refetchPositions();
                     refetchVault();
                   }}
