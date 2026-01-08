@@ -675,6 +675,7 @@ export function useDepositCollateral() {
           abi: CollateralVaultABI,
           functionName: 'deposit',
           args: [tokenAddress as `0x${string}`, amount],
+          gas: BigInt(500000), // Manual gas limit for Stylus contracts
         });
         
         console.log('✓ writeContract called successfully');

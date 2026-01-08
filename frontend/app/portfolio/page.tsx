@@ -53,6 +53,8 @@ export default function PortfolioPage() {
       depositAmountNum,
       hasEnoughAllowance,
       approveSuccess,
+      vaultAddress: config.contracts.vault,
+      usdcAddress: config.contracts.usdc,
     });
   }, [allowance, depositAmountNum, hasEnoughAllowance, approveSuccess]);
 
@@ -90,18 +92,30 @@ export default function PortfolioPage() {
     }
   };
 
-  // Refetch allowance after successful approve
+  // Refetch allowance after successful approve and auto-deposit
   useEffect(() => {
-    if (approveSuccess) {
+    if (approveSuccess && approveHash) {
       console.log('✅ Approval successful! Refetching token balance and allowance...');
+      console.log('  Approval tx:', approveHash);
       refetchTokenBalance();
-      // Small delay to ensure the refetch completes before checking allowance
-      setTimeout(() => {
+      // Refetch again after a delay, then auto-deposit
+      setTimeout(async () => {
         refetchTokenBalance();
         console.log('✓ Token balance and allowance refetched');
-      }, 1000);
+        // Auto-deposit after approval if we have enough allowance
+        const amount = parseFloat(depositAmount || '0');
+        if (amount > 0 && amount <= walletBalance) {
+          console.log('🚀 Auto-depositing after approval...', { amount, walletBalance });
+          try {
+            const amountBigInt = BigInt(Math.floor(amount * 1e6));
+            await deposit(config.contracts.usdc, amountBigInt);
+          } catch (err: any) {
+            console.error('Auto-deposit failed:', err);
+          }
+        }
+      }, 2000);
     }
-  }, [approveSuccess, refetchTokenBalance]);
+  }, [approveSuccess, approveHash, refetchTokenBalance, depositAmount, walletBalance, deposit]);
 
   // Refetch balances after successful deposit
   useEffect(() => {

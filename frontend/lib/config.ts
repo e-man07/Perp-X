@@ -6,7 +6,7 @@ export const config = {
   // Deployed 2026-01-04 - Full working system
   contracts: {
     factory: "0x0000000000000000000000000000000000000000", // OutcomePerpsFactory (use markets directly)
-    vault: "0xf77ada7706ab8869230900e3be8835ddd4f7195a", // CollateralVault (NEW)
+    vault: "0xcf056e06fd51166581a6d7fe31767c23dbc4991f", // CollateralVault (redeployed with storage cache fix)
     positionManager: "0xcb3e422143d1c5603c86b0ccd419156bf5d8b045", // PositionManager
     priceAdapter: "0xb4b7bc3957eaf4e75be74f83a25e659ed0bd8e5c", // PythPriceAdapter
     insuranceFund: "0xb10706d5d65bba12092ff359005c216ee863a344", // InsuranceFund
