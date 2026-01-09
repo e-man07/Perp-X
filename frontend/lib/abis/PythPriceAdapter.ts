@@ -1,7 +1,7 @@
 export const PythPriceAdapterABI = [
   {
     "type": "function",
-    "name": "update_price_cache",
+    "name": "submitPrice",
     "inputs": [
       { "name": "asset", "type": "string" },
       { "name": "price", "type": "uint256" }
@@ -11,7 +11,27 @@ export const PythPriceAdapterABI = [
   },
   {
     "type": "function",
-    "name": "update_price_cache_by_id",
+    "name": "submitPriceById",
+    "inputs": [
+      { "name": "price_id", "type": "bytes32" },
+      { "name": "price", "type": "uint256" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "updatePriceCache",
+    "inputs": [
+      { "name": "asset", "type": "string" },
+      { "name": "price", "type": "uint256" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "updatePriceCacheById",
     "inputs": [
       { "name": "price_id", "type": "bytes32" },
       { "name": "price", "type": "uint256" }

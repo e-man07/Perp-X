@@ -6,9 +6,9 @@ export const config = {
   // Deployed 2026-01-04 - Full working system
   contracts: {
     factory: "0x0000000000000000000000000000000000000000", // OutcomePerpsFactory (use markets directly)
-    vault: "0xcf056e06fd51166581a6d7fe31767c23dbc4991f", // CollateralVault (redeployed with storage cache fix)
+    vault: "0x456628c1ac3da5b0a1b15f28762a643a38ae5745", // CollateralVault (v3 - with admin release)
     positionManager: "0xcb3e422143d1c5603c86b0ccd419156bf5d8b045", // PositionManager
-    priceAdapter: "0xb4b7bc3957eaf4e75be74f83a25e659ed0bd8e5c", // PythPriceAdapter
+    priceAdapter: "0xcadfc95764e2480d3a44f3a74fb5bd225582e012", // PythPriceAdapter (v2 - with public submit_price)
     insuranceFund: "0xb10706d5d65bba12092ff359005c216ee863a344", // InsuranceFund
     liquidationEngine: "0x2361425d154e66aca0272b718571836203601983", // LiquidationEngine
     orderBook: "0x0fcd5872c3730ac931d6ef52256b35e1079d40e6", // OrderBook
@@ -17,7 +17,7 @@ export const config = {
     usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // Circle USDC (6 decimals)
     markets: {
       btc: {
-        micro: "0x8ff707bf5b4ea61ae1300c68e0333ded221cdd2f", // 24h BTC market (redeployed with new vault)
+        micro: "0xbd1b96f0bcffee4dfdcc683fbec612cddb5d24d8", // 24h BTC market (v4 - with new vault)
         daily: "0x0000000000000000000000000000000000000000", // 7d BTC market
         macro: "0x0000000000000000000000000000000000000000", // 30d BTC market
       },
@@ -39,11 +39,11 @@ export const config = {
     pythOracle: "0xC5E56d6b40F3e5F65e23aEe2e85dD8139279C11C",
   },
 
-  // Pyth Price Feed IDs
+  // Pyth Price Feed IDs (bytes32 - exactly as used by OutcomeMarket contracts)
   priceFeedIds: {
-    "BTC/USD": "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a4b68b",
+    "BTC/USD": "0xe62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a4b68b0",
     "ETH/USD": "0xff61491a931112ddf1bd8147cd1b641375f79f5825126d665480874634fd0ace",
-    "ARB/USD": "0x3fa4252848f9f0a1480be62745a4629d9eb1322aebab8a791e344b3b9c1adcf",
+    "ARB/USD": "0x3fa4252848f9f0a1480be62745a4629d9eb1322aebab8a791e344b3b9c1adcf5",
   },
 
   // Network Configuration - Arbitrum Sepolia

@@ -661,7 +661,7 @@ export function TradingPanel({ market }: TradingPanelProps) {
                   <details className="text-xs opacity-75 mt-1">
                     <summary className="cursor-pointer hover:underline">Technical details</summary>
                     <pre className="mt-1 p-2 bg-error/10 rounded text-xs overflow-auto max-h-32">
-                      {JSON.stringify(positionError, null, 2)}
+                      {JSON.stringify(positionError, (_, v) => typeof v === 'bigint' ? v.toString() : v, 2)}
                     </pre>
                   </details>
                 )}

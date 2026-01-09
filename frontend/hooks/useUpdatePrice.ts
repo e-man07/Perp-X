@@ -19,7 +19,8 @@ export function useUpdatePrice() {
   });
 
   /**
-   * Update the cached price for an asset
+   * Submit the price for an asset (PUBLIC - anyone can call)
+   * Uses price ID (bytes32) to ensure it matches what OutcomeMarket expects
    * @param asset - The asset name (e.g., "BTC/USD")
    * @param priceUsd - The price in USD (e.g., 91000 for $91,000)
    */
@@ -27,18 +28,27 @@ export function useUpdatePrice() {
     // Convert to 18 decimals (contract expects price in 18 decimal format)
     const price18Dec = BigInt(Math.floor(priceUsd * 1e18));
 
-    console.log('Updating price cache:', {
+    // Get the price ID for this asset
+    const priceId = config.priceFeedIds[asset as keyof typeof config.priceFeedIds];
+    if (!priceId) {
+      console.error('Unknown asset:', asset);
+      return;
+    }
+
+    console.log('Submitting price to PriceAdapter by ID:', {
       asset,
+      priceId,
       priceUsd,
       price18Dec: price18Dec.toString(),
       priceAdapter: config.contracts.priceAdapter
     });
 
+    // Use submitPriceById - uses the exact price ID that OutcomeMarket expects
     writeContract({
       address: config.contracts.priceAdapter as `0x${string}`,
       abi: PythPriceAdapterABI,
-      functionName: 'update_price_cache',
-      args: [asset, price18Dec],
+      functionName: 'submitPriceById',
+      args: [priceId as `0x${string}`, price18Dec],
       gas: BigInt(300000), // Manual gas limit for Stylus contracts
     });
   };
