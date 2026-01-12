@@ -7,6 +7,7 @@ import { useMarketPrice, useMarketData } from '@/hooks/useMarketData';
 import { useCoinGeckoCandles, useCoinGeckoPrice } from '@/hooks/useCoinGecko';
 import { config } from '@/lib/config';
 import { formatNumber, formatTimeRemaining } from '@/lib/utils';
+import { TrendingUp, TrendingDown, Clock } from 'lucide-react';
 
 interface PriceChartProps {
   market: string;
@@ -29,20 +30,21 @@ export function PriceChart({ market }: PriceChartProps) {
   // Use CoinGecko for real-time price and candles
   const { price: coinGeckoPrice, change24hPercent, isLoading: coinGeckoLoading } = useCoinGeckoPrice(market);
   const { candles: coinGeckoCandles, isLoading: candlesLoading } = useCoinGeckoCandles(market, 1); // 1 day = 24h
-  
+
   // Fallback to contract data
   const { price: contractPrice, isLoading: contractPriceLoading } = useMarketPrice(marketAddress);
   const { expiryTimestamp, totalLongOI, totalShortOI } = useMarketData(marketAddress);
-  
+
   // Use CoinGecko price if available, otherwise fallback to contract
   const currentPrice = coinGeckoPrice > 0 ? coinGeckoPrice : contractPrice;
   const priceLoading = coinGeckoLoading || contractPriceLoading;
-  
+
   // Calculate expiry info
   const expiry = expiryTimestamp ? Number(expiryTimestamp) : 0;
-  
+
   // Use CoinGecko 24h change
   const change24h = change24hPercent || 0;
+  const isPositive = change24h >= 0;
 
   useEffect(() => {
     if (!chartContainerRef.current) return;
@@ -51,15 +53,16 @@ export function PriceChart({ market }: PriceChartProps) {
       // Create chart with proper typing
       const chart = createChart(chartContainerRef.current, {
         layout: {
-          background: { type: ColorType.Solid, color: '#0a0a0a' },
-          textColor: '#a3a3a3',
+          background: { type: ColorType.Solid, color: 'transparent' },
+          textColor: '#737373',
+          fontFamily: 'JetBrains Mono, monospace',
         },
         grid: {
-          vertLines: { color: '#262626' },
-          horzLines: { color: '#262626' },
+          vertLines: { color: 'rgba(255, 255, 255, 0.03)' },
+          horzLines: { color: 'rgba(255, 255, 255, 0.03)' },
         },
         width: chartContainerRef.current.clientWidth,
-        height: 400,
+        height: 350,
         timeScale: {
           borderColor: '#262626',
           timeVisible: true,
@@ -68,17 +71,29 @@ export function PriceChart({ market }: PriceChartProps) {
         rightPriceScale: {
           borderColor: '#262626',
         },
+        crosshair: {
+          vertLine: {
+            color: 'rgba(255, 255, 255, 0.2)',
+            width: 1,
+            style: 2,
+          },
+          horzLine: {
+            color: 'rgba(255, 255, 255, 0.2)',
+            width: 1,
+            style: 2,
+          },
+        },
       });
 
       chartRef.current = chart;
 
       // Add candlestick series with proper typing (v5 API)
       const candlestickSeries = chart.addSeries(CandlestickSeries, {
-        upColor: '#10b981',
+        upColor: '#22c55e',
         downColor: '#ef4444',
-        borderUpColor: '#10b981',
+        borderUpColor: '#22c55e',
         borderDownColor: '#ef4444',
-        wickUpColor: '#10b981',
+        wickUpColor: '#22c55e',
         wickDownColor: '#ef4444',
       });
 
@@ -128,43 +143,55 @@ export function PriceChart({ market }: PriceChartProps) {
         low: candle.low,
         close: candle.close,
       }));
-      
+
       seriesRef.current.setData(data);
     }
   }, [coinGeckoCandles]);
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>{market}</CardTitle>
-            <div className="text-xs text-muted-foreground mt-1">
-              Outcome Market • {expiry > 0 ? `Expires in ${formatTimeRemaining(expiry)}` : 'No expiry set'}
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          {/* Market Info */}
+          <div className="flex items-center gap-4">
+            <div>
+              <CardTitle className="text-xl font-bold">{market}</CardTitle>
+              <div className="flex items-center gap-2 text-xs text-gray-500 mt-1">
+                <Clock className="h-3 w-3" />
+                <span>{expiry > 0 ? `Expires in ${formatTimeRemaining(expiry)}` : 'No expiry set'}</span>
+              </div>
             </div>
           </div>
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">24h Change:</span>
-              {priceLoading ? (
-                <span className="text-muted-foreground">Loading...</span>
-              ) : (
-                <span className={change24h >= 0 ? 'text-success font-medium' : 'text-error font-medium'}>
-                  {change24h >= 0 ? '+' : ''}{formatNumber(change24h, 2)}%
-                </span>
-              )}
+
+          {/* Price Stats */}
+          <div className="flex items-center gap-6">
+            {/* Current Price */}
+            <div className="text-right">
+              <div className="text-2xs text-gray-500 uppercase tracking-wider mb-1">Current Price</div>
+              <div className="font-mono text-xl font-bold">
+                {priceLoading ? (
+                  <span className="text-gray-500">Loading...</span>
+                ) : currentPrice ? (
+                  `$${formatNumber(currentPrice, 2)}`
+                ) : (
+                  '--'
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">Current Price:</span>
-              <span className="font-mono font-medium">
-                {priceLoading ? 'Loading...' : currentPrice ? `$${formatNumber(currentPrice, 2)}` : '--'}
-              </span>
+
+            {/* 24h Change */}
+            <div className="text-right">
+              <div className="text-2xs text-gray-500 uppercase tracking-wider mb-1">24h Change</div>
+              <div className={`flex items-center gap-1 font-mono text-lg font-semibold ${isPositive ? 'text-success' : 'text-error'}`}>
+                {isPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                <span>{isPositive ? '+' : ''}{formatNumber(change24h, 2)}%</span>
+              </div>
             </div>
           </div>
         </div>
       </CardHeader>
-      <CardContent>
-        <div ref={chartContainerRef} />
+      <CardContent className="pt-0">
+        <div ref={chartContainerRef} className="rounded-lg overflow-hidden" />
       </CardContent>
     </Card>
   );

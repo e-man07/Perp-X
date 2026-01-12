@@ -22,7 +22,7 @@ function generateOrderBook(basePrice: number) {
   // Generate asks (sell orders) - above current price
   const asks = [];
   let askTotal = 0;
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 6; i++) {
     const priceOffset = halfSpread + (basePrice * 0.0001 * (i + 1) * Math.random());
     const price = basePrice + priceOffset;
     const amount = 0.5 + Math.random() * 10;
@@ -37,7 +37,7 @@ function generateOrderBook(basePrice: number) {
   // Generate bids (buy orders) - below current price
   const bids = [];
   let bidTotal = 0;
-  for (let i = 0; i < 5; i++) {
+  for (let i = 0; i < 6; i++) {
     const priceOffset = halfSpread + (basePrice * 0.0001 * (i + 1) * Math.random());
     const price = basePrice - priceOffset;
     const amount = 0.5 + Math.random() * 10;
@@ -67,17 +67,20 @@ export function OrderBook({ market, currentPrice }: OrderBookProps) {
   }, [currentPrice]);
 
   const midPrice = currentPrice > 0 ? currentPrice : (bids[0]?.price || 0);
+  const maxTotal = Math.max(
+    ...asks.map(a => a.total),
+    ...bids.map(b => b.total)
+  );
 
   if (currentPrice <= 0) {
     return (
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Order Book</CardTitle>
-          </div>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-semibold">Order Book</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-center py-8 text-muted-foreground text-sm">
+          <div className="text-center py-12 text-gray-500 text-sm">
+            <div className="h-6 w-6 mx-auto mb-2 rounded-full border-2 border-gray-700 border-t-gray-500 animate-spin" />
             Loading price data...
           </div>
         </CardContent>
@@ -87,58 +90,66 @@ export function OrderBook({ market, currentPrice }: OrderBookProps) {
 
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <CardTitle className="text-base">Order Book</CardTitle>
-          <div className="flex gap-2 text-xs">
-            <button className="px-2 py-1 rounded bg-secondary hover:bg-muted transition-colors">
-              0.01
-            </button>
-            <button className="px-2 py-1 rounded bg-white text-black">
-              0.1
-            </button>
-            <button className="px-2 py-1 rounded bg-secondary hover:bg-muted transition-colors">
-              1
-            </button>
+          <CardTitle className="text-sm font-semibold">Order Book</CardTitle>
+          <div className="flex gap-1">
+            {['0.01', '0.1', '1'].map((precision, i) => (
+              <button
+                key={precision}
+                className={`px-2 py-1 rounded text-2xs font-mono transition-colors ${
+                  i === 1 ? 'bg-white text-black' : 'bg-gray-900 text-gray-400 hover:bg-gray-800'
+                }`}
+              >
+                {precision}
+              </button>
+            ))}
           </div>
         </div>
       </CardHeader>
       <CardContent>
         {/* Header */}
-        <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground mb-2 font-medium">
+        <div className="grid grid-cols-3 gap-2 text-2xs text-gray-500 mb-2 font-medium uppercase tracking-wider">
           <div className="text-left">Price</div>
           <div className="text-right">Size</div>
           <div className="text-right">Total</div>
         </div>
 
         {/* Asks (Sell Orders) */}
-        <div className="space-y-0.5 mb-3">
+        <div className="space-y-0.5 mb-2">
           {asks.map((ask, i) => (
-            <div key={i} className="grid grid-cols-3 gap-2 text-xs relative group hover:bg-muted/50 py-0.5 rounded">
-              <div className="absolute inset-y-0 right-0 bg-error/10" style={{ width: `${Math.min((ask.total / 50) * 100, 100)}%` }} />
+            <div key={i} className="grid grid-cols-3 gap-2 text-xs relative group hover:bg-white/5 py-1 rounded transition-colors">
+              <div
+                className="absolute inset-y-0 right-0 bg-error/10 rounded-r transition-all"
+                style={{ width: `${Math.min((ask.total / maxTotal) * 100, 100)}%` }}
+              />
               <div className="text-error font-mono relative z-10">{formatNumber(ask.price, 2)}</div>
-              <div className="text-right font-mono text-muted-foreground relative z-10">{formatNumber(ask.amount, 4)}</div>
-              <div className="text-right font-mono text-muted-foreground relative z-10">{formatNumber(ask.total, 4)}</div>
+              <div className="text-right font-mono text-gray-400 relative z-10">{formatNumber(ask.amount, 4)}</div>
+              <div className="text-right font-mono text-gray-500 relative z-10">{formatNumber(ask.total, 4)}</div>
             </div>
           ))}
         </div>
 
         {/* Spread / Current Price */}
-        <div className="py-2 px-2 bg-secondary rounded mb-3 text-center">
-          <div className="text-lg font-mono font-bold">${formatNumber(midPrice, 2)}</div>
-          <div className="text-xs text-muted-foreground">
-            Spread: ${formatNumber(spread, 2)} ({formatNumber(spreadPercent, 3)}%)
+        <div className="py-3 px-3 bg-gray-900 rounded-lg mb-2 text-center border border-gray-800">
+          <div className="text-xl font-mono font-bold">${formatNumber(midPrice, 2)}</div>
+          <div className="text-2xs text-gray-500 mt-1">
+            Spread: <span className="font-mono">${formatNumber(spread, 2)}</span>
+            <span className="text-gray-600 ml-1">({formatNumber(spreadPercent, 3)}%)</span>
           </div>
         </div>
 
         {/* Bids (Buy Orders) */}
         <div className="space-y-0.5">
           {bids.map((bid, i) => (
-            <div key={i} className="grid grid-cols-3 gap-2 text-xs relative group hover:bg-muted/50 py-0.5 rounded">
-              <div className="absolute inset-y-0 right-0 bg-success/10" style={{ width: `${Math.min((bid.total / 50) * 100, 100)}%` }} />
+            <div key={i} className="grid grid-cols-3 gap-2 text-xs relative group hover:bg-white/5 py-1 rounded transition-colors">
+              <div
+                className="absolute inset-y-0 right-0 bg-success/10 rounded-r transition-all"
+                style={{ width: `${Math.min((bid.total / maxTotal) * 100, 100)}%` }}
+              />
               <div className="text-success font-mono relative z-10">{formatNumber(bid.price, 2)}</div>
-              <div className="text-right font-mono text-muted-foreground relative z-10">{formatNumber(bid.amount, 4)}</div>
-              <div className="text-right font-mono text-muted-foreground relative z-10">{formatNumber(bid.total, 4)}</div>
+              <div className="text-right font-mono text-gray-400 relative z-10">{formatNumber(bid.amount, 4)}</div>
+              <div className="text-right font-mono text-gray-500 relative z-10">{formatNumber(bid.total, 4)}</div>
             </div>
           ))}
         </div>

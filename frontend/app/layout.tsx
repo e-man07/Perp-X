@@ -1,21 +1,11 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Web3Provider } from "@/components/providers/Web3Provider";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
 export const metadata: Metadata = {
-  title: "Perp-X - Leveraged Prediction Markets",
-  description: "Trade outcome-based perpetuals with forced expiry on Monad",
+  title: "Perp-X | Leveraged Prediction Markets",
+  description: "Trade outcome-based perpetuals with forced expiry on Arbitrum. Up to 40x leverage on BTC, ETH, and more.",
+  keywords: ["crypto", "trading", "prediction markets", "perpetuals", "arbitrum", "defi"],
 };
 
 export default function RootLayout({
@@ -24,12 +14,17 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
-      >
+    <html lang="en" className="dark">
+      <body className="min-h-screen bg-background text-foreground antialiased font-sans">
         <Web3Provider>
-          {children}
+          <div className="relative min-h-screen bg-grid">
+            {/* Subtle scan line effect */}
+            <div className="scan-line" />
+            {/* Content */}
+            <div className="relative z-10">
+              {children}
+            </div>
+          </div>
         </Web3Provider>
       </body>
     </html>

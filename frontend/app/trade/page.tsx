@@ -28,29 +28,39 @@ export default function TradePage() {
 
       <div className="container mx-auto px-4 py-6">
         {/* Market Selector */}
-        <MarketSelector
-          selectedMarket={selectedMarket}
-          onSelectMarket={setSelectedMarket}
-        />
+        <div className="animate-slide-down">
+          <MarketSelector
+            selectedMarket={selectedMarket}
+            onSelectMarket={setSelectedMarket}
+          />
+        </div>
 
         {/* Main Trading Grid */}
         <div className="grid grid-cols-12 gap-4 mt-6">
-          {/* Left Column - Chart & Order Book */}
-          <div className="col-span-12 lg:col-span-9 space-y-4">
+          {/* Left Column - Chart & Positions */}
+          <div className="col-span-12 lg:col-span-8 space-y-4">
             {/* Price Chart */}
-            <PriceChart market={selectedMarket.name} />
+            <div className="animate-fade-in delay-100">
+              <PriceChart market={selectedMarket.name} />
+            </div>
 
             {/* Positions Panel */}
-            <PositionsPanel />
+            <div className="animate-fade-in delay-200">
+              <PositionsPanel />
+            </div>
           </div>
 
           {/* Right Column - Order Book & Trading */}
-          <div className="col-span-12 lg:col-span-3 space-y-4">
+          <div className="col-span-12 lg:col-span-4 space-y-4">
             {/* Order Book */}
-            <OrderBook market={selectedMarket.name} currentPrice={currentPrice} />
+            <div className="animate-fade-in delay-100">
+              <OrderBook market={selectedMarket.name} currentPrice={currentPrice} />
+            </div>
 
             {/* Trading Panel */}
-            <TradingPanel market={selectedMarket.address} />
+            <div className="animate-fade-in delay-200">
+              <TradingPanel market={selectedMarket.address} />
+            </div>
           </div>
         </div>
       </div>

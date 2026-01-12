@@ -3,7 +3,7 @@
 import { config } from "@/lib/config";
 import { cn, formatTimeRemaining } from "@/lib/utils";
 import { useMarketData } from "@/hooks/useMarketData";
-import { Clock } from "lucide-react";
+import { Clock, TrendingUp, Zap, Calendar } from "lucide-react";
 
 export type ExpiryOption = 'micro' | 'daily' | 'macro';
 
@@ -15,16 +15,16 @@ export interface MarketInfo {
   expiryHours: number;
 }
 
-const expiryOptions: { key: ExpiryOption; label: string; hours: number }[] = [
-  { key: 'micro', label: '24h', hours: 24 },
-  { key: 'daily', label: '7d', hours: 168 },
-  { key: 'macro', label: '30d', hours: 720 },
+const expiryOptions: { key: ExpiryOption; label: string; hours: number; icon: typeof Clock }[] = [
+  { key: 'micro', label: '24h', hours: 24, icon: Zap },
+  { key: 'daily', label: '7d', hours: 168, icon: Calendar },
+  { key: 'macro', label: '30d', hours: 720, icon: TrendingUp },
 ];
 
 const assetMarkets = [
-  { name: "BTC/USD", key: "btc" as const },
-  { name: "ETH/USD", key: "eth" as const },
-  { name: "ARB/USD", key: "arb" as const },
+  { name: "BTC/USD", key: "btc" as const, symbol: "BTC" },
+  { name: "ETH/USD", key: "eth" as const, symbol: "ETH" },
+  { name: "ARB/USD", key: "arb" as const, symbol: "ARB" },
 ];
 
 interface MarketSelectorProps {
@@ -32,57 +32,61 @@ interface MarketSelectorProps {
   onSelectMarket: (market: MarketInfo) => void;
 }
 
-function MarketButton({ 
-  market, 
-  isSelected, 
-  onClick 
-}: { 
-  market: MarketInfo; 
-  isSelected: boolean; 
+function MarketButton({
+  market,
+  isSelected,
+  onClick
+}: {
+  market: MarketInfo;
+  isSelected: boolean;
   onClick: () => void;
 }) {
   const { expiryTimestamp, settled } = useMarketData(market.address);
   const expiry = expiryTimestamp ? Number(expiryTimestamp) : 0;
   const timeRemaining = expiry > 0 ? formatTimeRemaining(expiry) : null;
   const isExpired = expiry > 0 && Date.now() / 1000 >= expiry;
+  const expiryOption = expiryOptions.find(e => e.key === market.expiry);
+  const Icon = expiryOption?.icon || Clock;
 
   return (
     <button
       onClick={onClick}
       className={cn(
-        "flex flex-col items-start gap-1.5 px-4 py-3 rounded-lg border transition-all whitespace-nowrap text-left min-w-[140px]",
+        "flex flex-col items-start gap-2 px-4 py-3 rounded-xl border transition-all min-w-[160px]",
+        "hover:shadow-glow-sm",
         isSelected
-          ? "bg-white text-black border-white shadow-md"
-          : "bg-secondary border-border hover:border-muted-foreground hover:bg-secondary/80"
+          ? "bg-white text-black border-white shadow-glow-md"
+          : "bg-gray-950 border-gray-800 hover:border-gray-700"
       )}
     >
-      <div className="flex items-center gap-2 w-full">
-        <span className="font-semibold text-sm">{market.name}</span>
+      <div className="flex items-center justify-between w-full">
+        <div className="flex items-center gap-2">
+          <Icon className={cn("h-4 w-4", isSelected ? "text-gray-600" : "text-gray-500")} />
+          <span className="font-semibold text-sm">{market.expiryLabel}</span>
+        </div>
         {settled && (
-          <span className="text-xs px-1.5 py-0.5 bg-muted rounded">Settled</span>
+          <span className="text-2xs px-1.5 py-0.5 bg-gray-200 text-gray-700 rounded font-medium">Settled</span>
         )}
         {isExpired && !settled && (
-          <span className="text-xs px-1.5 py-0.5 bg-error/20 text-error rounded">Expired</span>
+          <span className="text-2xs px-1.5 py-0.5 bg-error/20 text-error rounded font-medium">Expired</span>
         )}
       </div>
-      <div className="flex items-center gap-2 w-full">
-        <span className="text-xs font-medium px-2 py-0.5 bg-primary/10 text-primary rounded">
-          {market.expiryLabel}
-        </span>
-        {timeRemaining && !isExpired && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>{timeRemaining}</span>
-          </div>
-        )}
-      </div>
+      {timeRemaining && !isExpired && (
+        <div className={cn(
+          "flex items-center gap-1.5 text-xs",
+          isSelected ? "text-gray-600" : "text-gray-500"
+        )}>
+          <Clock className="h-3 w-3" />
+          <span className="font-mono">{timeRemaining}</span>
+        </div>
+      )}
     </button>
   );
 }
 
 export function MarketSelector({ selectedMarket, onSelectMarket }: MarketSelectorProps) {
   // Generate all market combinations
-  const allMarkets: MarketInfo[] = assetMarkets.flatMap(asset => 
+  const allMarkets: MarketInfo[] = assetMarkets.flatMap(asset =>
     expiryOptions.map(expiry => ({
       name: asset.name,
       address: config.contracts.markets[asset.key][expiry.key],
@@ -93,11 +97,11 @@ export function MarketSelector({ selectedMarket, onSelectMarket }: MarketSelecto
   );
 
   return (
-    <div className="space-y-4 p-4 bg-card border rounded-lg">
+    <div className="space-y-6 p-5 bg-gray-950 border border-gray-800/50 rounded-xl">
       {/* Asset Selection */}
       <div>
-        <label className="text-sm font-semibold text-foreground mb-3 block">
-          📊 Select Asset
+        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3 block">
+          Select Asset
         </label>
         <div className="flex gap-2 flex-wrap">
           {assetMarkets.map((asset) => {
@@ -114,13 +118,15 @@ export function MarketSelector({ selectedMarket, onSelectMarket }: MarketSelecto
                   onSelectMarket(newMarket);
                 }}
                 className={cn(
-                  "px-4 py-2.5 rounded-md border-2 transition-all font-medium text-sm",
+                  "px-5 py-2.5 rounded-lg border-2 transition-all font-semibold text-sm",
+                  "hover:shadow-glow-sm",
                   isSelected
-                    ? "bg-primary text-primary-foreground border-primary shadow-md scale-105"
-                    : "bg-secondary border-border hover:border-primary/50 hover:bg-secondary/80"
+                    ? "bg-white text-black border-white shadow-glow-md"
+                    : "bg-gray-950 border-gray-800 hover:border-gray-700 text-white"
                 )}
               >
-                {asset.name}
+                <span className="font-mono">{asset.symbol}</span>
+                <span className="text-gray-400 ml-1">/USD</span>
               </button>
             );
           })}
@@ -129,22 +135,22 @@ export function MarketSelector({ selectedMarket, onSelectMarket }: MarketSelecto
 
       {/* Expiry Selection */}
       <div>
-        <label className="text-sm font-semibold text-foreground mb-3 block">
-          ⏰ Select Expiry Duration
+        <label className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-3 block">
+          Select Expiry
         </label>
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        <div className="flex gap-3 overflow-x-auto pb-2">
           {expiryOptions.map((expiry) => {
             const market = allMarkets.find(
               m => m.name === selectedMarket.name && m.expiry === expiry.key
             );
             if (!market) return null;
-            
+
             return (
               <MarketButton
                 key={`${selectedMarket.name}-${expiry.key}`}
                 market={market}
                 isSelected={
-                  selectedMarket.name === market.name && 
+                  selectedMarket.name === market.name &&
                   selectedMarket.expiry === market.expiry
                 }
                 onClick={() => onSelectMarket(market)}
