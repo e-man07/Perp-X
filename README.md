@@ -1,179 +1,234 @@
 # Perp-X
 
-> **A novel perpetual futures primitive with forced expiry and outcome settlement**
+> **Leveraged Prediction Markets with Forced Expiry on Arbitrum**
 
-Build status: ✅ **ALL CONTRACTS COMPILED & READY FOR TESTING**
-
----
-
-## 🎯 What This Is
-
-A **research-level innovation** in perpetual futures design that:
-- Eliminates funding rate complexity
-- Prevents zombie positions through forced expiry
-- Uses outcome settlement instead of manual closing
-- Supports 1x-40x leverage with dynamic margins
-- Enables multi-collateral (USDC, USDT, WETH, WBTC)
+**Status:** Live on Arbitrum Sepolia Testnet
 
 ---
 
-## 🏗️ Contracts Built
+## What is Perp-X?
 
-| Contract | Purpose | Status |
-|----------|---------|--------|
-| OutcomeMarket.sol | Main trading market | ✅ Compiled |
-| PositionManager.sol | Position tracking | ✅ Compiled |
-| OutcomePerpsFactory.sol | Market deployment | ✅ Compiled |
-| CollateralVault.sol | Multi-asset collateral | ✅ Compiled |
-| LiquidationEngine.sol | Risk management | ✅ Compiled |
-| PythPriceAdapter.sol | Oracle integration | ✅ Compiled |
-| InsuranceFund.sol | Safety backstop | ✅ Compiled |
+Perp-X is a novel perpetual futures primitive that combines the simplicity of prediction markets with leveraged trading:
 
-Plus **2 libraries** with perpX-inspired logic
+- **Forced Expiry**: Markets expire after 24h, 7d, or 30d - no zombie positions
+- **No Funding Rates**: Simplified mechanics without complex funding calculations
+- **Outcome Settlement**: Automatic PnL settlement at expiry
+- **Up to 40x Leverage**: Dynamic margin requirements based on leverage
+- **Real-time Prices**: CoinGecko integration for live price feeds
 
 ---
 
-## 🚀 Key Features
+## Live Demo
 
-✨ **Forced Expiry**: 24h-30d market duration (no infinite positions)
-💰 **Automatic Settlement**: PnL settles at expiry (no manual closing)
-📊 **No Funding Rates**: Eliminated by design (simpler for users)
-🛡️ **perpX Margin Logic**: Sophisticated liquidation checks
-📈 **Dynamic Leverage**: 1x-40x with maintenance margin scaling
-🪙 **Multi-Collateral**: USDC, USDT, WETH, WBTC
+**Network**: Arbitrum Sepolia (Chain ID: 421614)
 
----
+### Deployed Markets
 
-## 🧮 perpX Integration
+| Market | Address | Expiry |
+|--------|---------|--------|
+| BTC/USD | `0xbd1b96f0bcffee4dfdcc683fbec612cddb5d24d8` | 24h |
+| ETH/USD | `0x3e741a1d222dc8a392a7caf4d12a8a8b6fb69800` | 24h |
+| ARB/USD | `0x95d352b33d82985200c4b5eb83d7a78744f86e85` | 24h |
 
-Adapted key concepts from perpX Solana DEX:
+### Core Contracts
 
-1. **Margin Ratio Calculation**
-   - `marginRatio = (equity / positionSize) * 10000`
-   - Liquidatable when below maintenance threshold
+| Contract | Address | Purpose |
+|----------|---------|---------|
+| CollateralVault | `0x456628c1ac3da5b0a1b15f28762a643a38ae5745` | USDC collateral management |
+| PositionManager | `0xcb3e422143d1c5603c86b0ccd419156bf5d8b045` | Position tracking & PnL |
+| PriceAdapter | `0xcadfc95764e2480d3a44f3a74fb5bd225582e012` | Pyth oracle integration |
+| LiquidationEngine | `0x2361425d154e66aca0272b718571836203601983` | Risk management |
+| InsuranceFund | `0xb10706d5d65bba12092ff359005c216ee863a344` | Safety backstop |
+| OrderBook | `0x0fcd5872c3730ac931d6ef52256b35e1079d40e6` | Order management |
+| CrossMargin | `0xce63953845b7b9732ed5fd0f0b519881f7904f66` | Cross-margin accounts |
 
-2. **Position Equity**
-   - `equity = collateral + PnL + accumulatedFunding`
-   - Better tracking of position health
-
-3. **Dynamic Maintenance Margins**
-   - 1x: 50% | 5x: 10% | 10x: 5% | 40x: 1.25%
-   - Higher leverage = stricter requirements
-
-4. **Open Interest Imbalance**
-   - Track long/short ratio
-   - Calculate price impact from imbalance
+**Collateral**: Circle USDC (`0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d`)
 
 ---
 
-## 📊 Build Status
+## Architecture
+
+### Smart Contracts (Stylus/Rust)
+
+Built with [Arbitrum Stylus](https://docs.arbitrum.io/stylus/stylus-gentle-introduction) - Rust-based WASM smart contracts for better performance and safety.
+
+```
+stylus/src/
+├── outcome_market.rs      # Main trading market logic
+├── position_manager.rs    # Position tracking & health
+├── collateral_vault.rs    # Multi-asset collateral
+├── liquidation_engine.rs  # Margin-based liquidations
+├── price_adapter.rs       # Pyth oracle integration
+├── insurance_fund.rs      # Protocol safety net
+├── order_book.rs          # Order management
+└── cross_margin.rs        # Cross-margin accounts
+```
+
+### Frontend (Next.js 16)
+
+Modern React frontend with real-time trading capabilities.
+
+```
+frontend/
+├── app/                   # Next.js App Router pages
+│   ├── trade/            # Trading terminal
+│   ├── markets/          # Market overview
+│   └── portfolio/        # Portfolio management
+├── components/
+│   ├── trading/          # Trading UI components
+│   ├── layout/           # Header, navigation
+│   └── ui/               # Reusable UI components
+├── hooks/                # React hooks for Web3
+└── lib/                  # Configuration & utilities
+```
+
+---
+
+## Key Features
+
+### Trading
+- **Long/Short Positions**: Predict price direction with leverage
+- **Real-time PnL**: Live profit/loss calculations using CoinGecko prices
+- **Position Management**: View, track, and close positions
+- **Liquidation Protection**: Dynamic margin requirements
+
+### User Experience
+- **Wallet Connect**: Reown AppKit integration
+- **Network Guard**: Automatic network switching
+- **Responsive Design**: Mobile-friendly trading interface
+- **Transaction Tracking**: Real-time transaction status
+
+### Oracle Integration
+- **Pyth Network**: On-chain price feeds
+- **CoinGecko API**: Real-time price display
+- **Price Caching**: Optimized for gas efficiency
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js 18+
+- A wallet with Arbitrum Sepolia ETH
+- Circle USDC (get from [Circle Faucet](https://faucet.circle.com/))
+
+### Run Locally
 
 ```bash
-✅ Compilation: SUCCESS
-├─ 7 core contracts
-├─ 2 libraries
-├─ 5 interfaces
-└─ 0 compilation errors (linting warnings only)
+# Clone the repository
+git clone https://github.com/your-repo/perp-x.git
+cd perp-x
+
+# Install frontend dependencies
+cd frontend
+npm install
+
+# Set up environment
+cp .env.example .env.local
+# Add your NEXT_PUBLIC_REOWN_PROJECT_ID
+
+# Run development server
+npm run dev
 ```
 
----
-
-## 📁 Project Structure
-
-```
-contracts/
-├── core/
-│   ├── OutcomeMarket.sol
-│   ├── PositionManager.sol      (+ perpX health metrics)
-│   └── OutcomePerpsFactory.sol
-├── collateral/
-│   └── CollateralVault.sol
-├── liquidation/
-│   ├── LiquidationEngine.sol    (margin-based)
-│   └── InsuranceFund.sol
-├── oracle/
-│   └── PythPriceAdapter.sol     (Pyth on Monad)
-├── interfaces/ (5 files)
-└── libraries/
-    ├── Math.sol                 (perpX-inspired)
-    └── Oracle.sol
-```
-
----
-
-## 🎓 What Makes This Different
-
-| Aspect | Traditional Perps | Outcome-Based |
-|--------|------------------|---------------|
-| Duration | ∞ | Fixed (24h-30d) |
-| Settlement | Manual + Liquidation | Automatic at expiry |
-| Funding | 8h cycles | None (no infinite positions) |
-| Closing | Manual | Forced at expiry |
-| Complexity | High | Low |
-| UX | Confusing for new users | Simple: Long/Short → Expiry |
-
----
-
-## 🚀 Next Steps
-
-### Phase 1: Testing ✍️
-- [ ] Unit tests for Math library
-- [ ] Unit tests for position health calculations
-- [ ] Integration tests for full user flow
-- [ ] Liquidation edge case tests
-
-### Phase 2: Deployment 🎯
-- [ ] Deploy to Monad testnet
-- [ ] Initialize BTC/USD market
-- [ ] Initialize ETH/USD market
-- [ ] Verify Pyth integration
-
-### Phase 3: Optimization ⚡
-- [ ] Gas optimization
-- [ ] Batch operation support
-- [ ] Storage packing
-
----
-
-## 💻 How to Build
+### Build for Production
 
 ```bash
-# Build contracts
-forge build
-
-# Run tests (when ready)
-forge test
-
-# Deploy (when ready)
-forge script script/Deploy.s.sol --rpc-url <RPC> --private-key <KEY>
+cd frontend
+npm run build
 ```
 
 ---
 
-## 📚 Documentation
+## How It Works
 
-- **ARCHITECTURE.md**: Detailed technical deep-dive
-- **DEPLOYED_ADDRESSES.md**: Contract addresses on Monad Testnet
-- **frontend/README.md**: Frontend documentation
-- **frontend/QUICKSTART.md**: Frontend quickstart guide
-- **contracts/interfaces/**: Contract interfaces
-- **contracts/libraries/Math.sol**: Math utility documentation
+### 1. Deposit Collateral
+Connect your wallet and deposit USDC to the vault. Your funds remain in your control.
+
+### 2. Open Position
+- Select a market (BTC, ETH, or ARB)
+- Choose direction (Long or Short)
+- Set collateral amount and leverage (1x-40x)
+- Confirm transaction
+
+### 3. Monitor & Close
+- Track real-time PnL
+- Close anytime before expiry
+- Or wait for automatic settlement at expiry
+
+### Position Mechanics
+
+```
+Position Size = Collateral × Leverage
+Entry Price = Current market price at open
+
+For LONG positions:
+  PnL = Position Size × (Current Price - Entry Price) / Entry Price
+
+For SHORT positions:
+  PnL = Position Size × (Entry Price - Current Price) / Entry Price
+
+Liquidation Price (LONG) = Entry Price × (1 - 1/Leverage)
+Liquidation Price (SHORT) = Entry Price × (1 + 1/Leverage)
+```
 
 ---
 
-## 🎯 This is NOT:
-- ❌ A clone of GMX/dYdX/Synthetix
-- ❌ Traditional perpetual futures
-- ❌ A spot trading DEX
-- ❌ A betting app with leverage
+## What Makes This Different
 
-## 🎯 This IS:
-- ✅ A new perp primitive with forced expiry
-- ✅ Outcome settlement instead of funding rates
-- ✅ Research-level innovation
-- ✅ Monad-native performance
-- ✅ perpX-inspired sophisticated liquidation logic
+| Aspect | Traditional Perps | Perp-X |
+|--------|------------------|--------|
+| Duration | Infinite | Fixed (24h-30d) |
+| Settlement | Manual | Automatic at expiry |
+| Funding Rates | Every 8h | None |
+| Closing | Manual or liquidation | Forced at expiry |
+| Complexity | High | Simple |
+| UX | Confusing | Long/Short → Wait → Settle |
 
 ---
 
-**Ready for testing and deployment!** 🚀
+## Tech Stack
+
+- **Smart Contracts**: Arbitrum Stylus (Rust/WASM)
+- **Frontend**: Next.js 16, React 19, TypeScript
+- **Styling**: Tailwind CSS
+- **Web3**: wagmi, viem, Reown AppKit
+- **Oracles**: Pyth Network, CoinGecko API
+- **Network**: Arbitrum Sepolia (Testnet)
+
+---
+
+## Project Structure
+
+```
+perp-x/
+├── frontend/              # Next.js frontend application
+│   ├── app/              # App Router pages
+│   ├── components/       # React components
+│   ├── hooks/            # Custom React hooks
+│   └── lib/              # Utilities & config
+├── stylus/               # Stylus smart contracts (Rust)
+│   ├── src/              # Contract source code
+│   └── deployments/      # Deployment artifacts
+└── README.md             # This file
+```
+
+---
+
+## Resources
+
+- **Block Explorer**: [Arbiscan Sepolia](https://sepolia.arbiscan.io)
+- **Get Test ETH**: [Arbitrum Sepolia Faucet](https://www.alchemy.com/faucets/arbitrum-sepolia)
+- **Get Test USDC**: [Circle Faucet](https://faucet.circle.com/)
+- **Pyth Network**: [docs.pyth.network](https://docs.pyth.network/)
+- **Arbitrum Stylus**: [docs.arbitrum.io/stylus](https://docs.arbitrum.io/stylus/stylus-gentle-introduction)
+
+---
+
+## License
+
+MIT License - see LICENSE file for details.
+
+---
+
+**Built for the Arbitrum ecosystem**
