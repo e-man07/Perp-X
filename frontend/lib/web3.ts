@@ -1,7 +1,6 @@
-import { createAppKit } from '@reown/appkit/react'
-import { WagmiProvider } from 'wagmi'
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { WagmiAdapter } from '@reown/appkit-adapter-wagmi'
+'use client'
+
+import { QueryClient } from '@tanstack/react-query'
 import { config } from './config'
 
 // Setup queryClient with rate limit handling
@@ -25,26 +24,60 @@ export const queryClient = new QueryClient({
   },
 })
 
-// Create Wagmi Adapter for Arbitrum Sepolia
-export const wagmiAdapter = new WagmiAdapter({
-  networks: [config.arbitrumSepolia],
-  projectId: config.projectId,
-})
+// These will be initialized on the client side only
+let wagmiAdapter: any = null;
+let wagmiConfig: any = null;
+let appKitInitialized = false;
 
-// Create modal
-createAppKit({
-  adapters: [wagmiAdapter],
-  networks: [config.arbitrumSepolia],
-  projectId: config.projectId,
-  metadata: {
-    name: 'Perp-X',
-    description: 'Leveraged Prediction Markets on Arbitrum',
-    url: 'https://perp-x.xyz',
-    icons: ['https://avatars.githubusercontent.com/u/37784886']
-  },
-  features: {
-    analytics: true,
+// Initialize web3 on client side only
+export async function initializeWeb3() {
+  if (typeof window === 'undefined') {
+    return null;
   }
-})
 
-export const wagmiConfig = wagmiAdapter.wagmiConfig
+  if (appKitInitialized && wagmiConfig) {
+    return wagmiConfig;
+  }
+
+  try {
+    const { createAppKit } = await import('@reown/appkit/react');
+    const { WagmiAdapter } = await import('@reown/appkit-adapter-wagmi');
+
+    // Create Wagmi Adapter for Arbitrum Sepolia
+    wagmiAdapter = new WagmiAdapter({
+      networks: [config.arbitrumSepolia],
+      projectId: config.projectId,
+    });
+
+    // Create modal
+    createAppKit({
+      adapters: [wagmiAdapter],
+      networks: [config.arbitrumSepolia],
+      projectId: config.projectId,
+      metadata: {
+        name: 'Perp-X',
+        description: 'Leveraged Prediction Markets on Arbitrum',
+        url: 'https://perp-x.xyz',
+        icons: ['https://avatars.githubusercontent.com/u/37784886']
+      },
+      features: {
+        analytics: true,
+      }
+    });
+
+    wagmiConfig = wagmiAdapter.wagmiConfig;
+    appKitInitialized = true;
+
+    return wagmiConfig;
+  } catch (error) {
+    console.error('Failed to initialize web3:', error);
+    return null;
+  }
+}
+
+// Export getter for wagmiConfig (for components that need it synchronously after init)
+export function getWagmiConfig() {
+  return wagmiConfig;
+}
+
+export { wagmiAdapter, wagmiConfig };
