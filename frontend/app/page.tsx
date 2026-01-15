@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { Header } from "@/components/layout/Header";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -93,7 +94,7 @@ export default function Home() {
       <section className="container mx-auto px-4 py-24">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Why <span className="text-gradient">Perp-X</span>?
+            Why <span className="text-gradient">perpX</span>?
           </h2>
           <p className="text-gray-500 max-w-xl mx-auto">
             A new paradigm in leveraged trading. Clean settlement, transparent mechanics, and gamified rewards.
@@ -210,12 +211,15 @@ export default function Home() {
       <footer className="border-t border-gray-800/50">
         <div className="container mx-auto px-4 py-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="h-8 w-8 rounded-lg bg-white flex items-center justify-center">
-                <span className="text-black font-bold">P</span>
-              </div>
-              <span className="font-semibold">PERP-X</span>
-            </div>
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/perpx-logo.png"
+                alt="perpX"
+                width={120}
+                height={35}
+                className="h-8 w-auto"
+              />
+            </Link>
             <div className="text-sm text-gray-500 text-center md:text-right">
               Built on Arbitrum Sepolia · Powered by Pyth Oracle
             </div>

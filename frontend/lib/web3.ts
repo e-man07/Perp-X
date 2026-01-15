@@ -55,10 +55,10 @@ export async function initializeWeb3() {
       networks: [config.arbitrumSepolia],
       projectId: config.projectId,
       metadata: {
-        name: 'Perp-X',
+        name: 'perpX',
         description: 'Leveraged Prediction Markets on Arbitrum',
-        url: 'https://perp-x.xyz',
-        icons: ['https://avatars.githubusercontent.com/u/37784886']
+        url: 'https://perpx.xyz',
+        icons: ['/perpx-logo.png']
       },
       features: {
         analytics: true,

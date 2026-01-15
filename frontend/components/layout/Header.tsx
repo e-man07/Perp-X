@@ -1,6 +1,7 @@
 'use client'
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Activity, BarChart3, Briefcase, Menu, X } from "lucide-react";
@@ -25,24 +26,24 @@ export function Header() {
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
           {/* Logo */}
           <div className="flex items-center gap-8">
-            <Link href="/" className="flex items-center gap-3 group">
-              {/* Logo mark */}
+            <Link href="/" className="flex items-center gap-2 group">
+              {/* Logo image */}
               <div className="relative">
-                <div className="h-9 w-9 rounded-lg bg-white flex items-center justify-center group-hover:shadow-glow-md transition-shadow duration-300">
-                  <span className="text-black font-bold text-lg">P</span>
-                </div>
-                {/* Animated pulse */}
+                <Image
+                  src="/perpx-logo.png"
+                  alt="perpX"
+                  width={140}
+                  height={40}
+                  className="h-9 w-auto group-hover:opacity-90 transition-opacity"
+                  priority
+                />
+                {/* Animated pulse - live indicator */}
                 <div className="absolute -top-0.5 -right-0.5">
                   <span className="relative flex h-2.5 w-2.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
                     <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-success"></span>
                   </span>
                 </div>
-              </div>
-              {/* Logo text */}
-              <div className="flex flex-col">
-                <span className="text-lg font-bold tracking-tight">PERP-X</span>
-                <span className="text-[10px] text-gray-500 uppercase tracking-wider -mt-0.5">Trading Terminal</span>
               </div>
             </Link>
 
