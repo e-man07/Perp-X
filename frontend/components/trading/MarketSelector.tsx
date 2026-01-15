@@ -96,6 +96,12 @@ export function MarketSelector({ selectedMarket, onSelectMarket }: MarketSelecto
     }))
   );
 
+  // Debug: log all markets and selected market
+  console.log('=== MarketSelector Debug ===');
+  console.log('All markets:', allMarkets.map(m => `${m.name} ${m.expiryLabel}: ${m.address}`));
+  console.log('Selected market:', selectedMarket.name, selectedMarket.expiryLabel, selectedMarket.address);
+  console.log('============================');
+
   return (
     <div className="space-y-6 p-5 bg-gray-950 border border-gray-800/50 rounded-xl">
       {/* Asset Selection */}

@@ -73,11 +73,19 @@ export function useOpenPosition() {
     collateralUSD: bigint,
     leverage: bigint
   ) => {
+    console.log('=== OPEN POSITION DEBUG ===');
+    console.log('Market:', marketAddress);
+    console.log('Direction:', direction);
+    console.log('Collateral (18 dec):', collateralUSD.toString());
+    console.log('Leverage:', leverage.toString());
+    console.log('===========================');
+
     writeContract({
       address: marketAddress as `0x${string}`,
       abi: OutcomeMarketABI,
       functionName: 'openPosition',
       args: [direction, collateralUSD, leverage],
+      gas: BigInt(3000000), // Even higher gas for Stylus contracts
     });
   };
 

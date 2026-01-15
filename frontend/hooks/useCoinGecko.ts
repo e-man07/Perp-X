@@ -36,13 +36,20 @@ export function useCoinGeckoPrice(marketName: string) {
       return;
     }
 
+    // Skip if marketName looks like a contract address (starts with 0x)
+    if (marketName.startsWith('0x')) {
+      console.warn('useCoinGeckoPrice received contract address instead of market name:', marketName);
+      setIsLoading(false);
+      return;
+    }
+
     // Get CoinGecko ID from market name
     const marketKey = marketName.toLowerCase();
-    const coinId = MARKET_TO_COINGECKO[marketKey] || 
-                   MARKET_TO_COINGECKO[marketName] ||
-                   marketKey.split('/')[0].toLowerCase();
+    const coinId = MARKET_TO_COINGECKO[marketKey] ||
+                   MARKET_TO_COINGECKO[marketName];
 
     if (!coinId) {
+      console.warn('Unknown market name for CoinGecko:', marketName);
       setError('Market not supported');
       setIsLoading(false);
       return;

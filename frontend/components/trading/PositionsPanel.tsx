@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { useUserPositions } from '@/hooks/usePositions';
 import { PositionRow } from './PositionRow';
 import { Layers, Clock, History, Wallet } from 'lucide-react';
+import { config } from '@/lib/config';
 
 type TabType = 'positions' | 'orders' | 'history';
 
@@ -30,9 +31,11 @@ export function PositionsPanel() {
   useEffect(() => {
     console.log('=== PositionsPanel Debug ===');
     console.log('openPositionIds count:', openPositionIds.length);
+    console.log('openPositionIds:', openPositionIds.map(id => id.toString()));
     console.log('isConnected:', isConnected);
     console.log('address:', address);
-  }, [openPositionIds.length, isConnected, address]);
+    console.log('PositionManager:', config.contracts.positionManager);
+  }, [openPositionIds.length, isConnected, address, openPositionIds]);
 
   // Auto-refetch positions periodically and on mount
   useEffect(() => {

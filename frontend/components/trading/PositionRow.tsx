@@ -26,7 +26,8 @@ function getMarketName(address: string): string {
   if (addrLower === markets.arb.micro.toLowerCase() ||
       addrLower === markets.arb.daily.toLowerCase() ||
       addrLower === markets.arb.macro.toLowerCase()) return 'ARB/USD';
-  return address.slice(0, 6) + '...';
+  // Default to BTC/USD for unknown addresses (instead of returning address)
+  return 'BTC/USD';
 }
 
 export function PositionRow({ positionId }: PositionRowProps) {
@@ -35,10 +36,14 @@ export function PositionRow({ positionId }: PositionRowProps) {
 
   // Get market address from position
   useEffect(() => {
+    console.log(`=== PositionRow Debug (ID: ${positionId}) ===`);
+    console.log('Raw position:', rawPosition);
     if (rawPosition) {
+      console.log('Position status:', rawPosition.status);
+      console.log('Position market:', rawPosition.market);
       setMarketAddress(rawPosition.market);
     }
-  }, [rawPosition]);
+  }, [rawPosition, positionId]);
 
   // Get market name for CoinGecko
   const marketName = useMemo(() => {

@@ -32,6 +32,15 @@ export function TradingPanel({ market }: TradingPanelProps) {
   // Get real data from hooks
   const { availableCollateral, refetch: refetchVault } = useVaultBalance();
   const { balance: walletBalance, allowance, refetch: refetchToken } = useTokenBalance(config.contracts.usdc);
+
+  // Debug vault balance
+  useEffect(() => {
+    console.log('=== VAULT DEBUG ===');
+    console.log('Available collateral:', availableCollateral);
+    console.log('Wallet balance:', walletBalance);
+    console.log('USDC allowance:', allowance);
+    console.log('===================');
+  }, [availableCollateral, walletBalance, allowance]);
   
   // Get market name for CoinGecko
   const marketName = useMemo(() => {
@@ -71,14 +80,37 @@ export function TradingPanel({ market }: TradingPanelProps) {
   
   // Log for debugging
   useEffect(() => {
+    console.log('=== PRICE DEBUG ===');
+    console.log('CoinGecko price:', coinGeckoPrice);
+    console.log('Contract cached price:', contractPrice);
+    console.log('Market address:', marketAddress);
+    console.log('Market name:', marketName);
+    console.log('===================');
     if (coinGeckoPrice > 0) {
       console.log('Using CoinGecko price:', coinGeckoPrice, 'for market:', marketName);
     } else if (contractPrice > 0) {
       console.log('Falling back to contract price:', contractPrice);
+    } else {
+      console.warn('NO VALID PRICE AVAILABLE - both CoinGecko and contract price are 0!');
     }
-  }, [coinGeckoPrice, contractPrice, marketName]);
+  }, [coinGeckoPrice, contractPrice, marketName, marketAddress]);
   
   const { expiryTimestamp, settled, totalLongOI, totalShortOI } = useMarketData(marketAddress);
+
+  // Debug market status
+  useEffect(() => {
+    console.log('=== MARKET STATUS DEBUG ===');
+    console.log('Expiry timestamp:', expiryTimestamp?.toString());
+    console.log('Is settled:', settled);
+    console.log('Current time:', Math.floor(Date.now() / 1000));
+    if (expiryTimestamp) {
+      const expiry = Number(expiryTimestamp);
+      const now = Math.floor(Date.now() / 1000);
+      console.log('Time until expiry:', expiry - now, 'seconds');
+      console.log('Market expired:', now >= expiry);
+    }
+    console.log('============================');
+  }, [expiryTimestamp, settled]);
   const { refetch: refetchPositions } = useUserPositions();
   
   // State to track auto-deposit flow (declare before using in isPending)
@@ -115,48 +147,39 @@ export function TradingPanel({ market }: TradingPanelProps) {
     }
   }, [isPositionOpen, refetchPositions, resetPriceUpdate]);
 
-  // After price update succeeds, proceed with approval/position opening
+  // After price update succeeds, proceed with opening position
   useEffect(() => {
-    if (isPriceUpdated && pendingPriceUpdate && pendingPosition && !isUpdatingPrice) {
-      console.log('Price updated successfully! Proceeding with position opening...');
+    if (isPriceUpdated && pendingPriceUpdate && pendingPosition && !isUpdatingPrice && !isOpeningPosition) {
+      console.log('Price updated successfully! Opening position...');
       setPendingPriceUpdate(false);
 
-      // Get token address for approval
-      const tokenAddress = config.contracts.usdc;
-      const approveAmount = BigInt(Math.floor(pendingPosition.amount * 1e6)); // USDC has 6 decimals
+      // Convert to contract format (18 decimals for collateral)
+      const collateralBigInt = BigInt(Math.floor(pendingPosition.amount * 1e18));
+      const leverageBigInt = BigInt(pendingPosition.leverage);
 
-      // Check if approval is needed
-      const currentAllowance = allowance * 1e6; // Convert back to 6 decimals
-
-      if (currentAllowance < Number(approveAmount)) {
-        // Request approval first
-        console.log('Requesting wallet approval for amount:', Number(approveAmount));
-        approve(tokenAddress, approveAmount);
-      } else {
-        // Already approved, open position directly
-        console.log('Already approved, opening position directly...');
-        const collateralBigInt = BigInt(Math.floor(pendingPosition.amount * 1e18));
-        const leverageBigInt = BigInt(pendingPosition.leverage);
-
-        openPosition(
-          marketAddress,
-          pendingPosition.direction,
-          collateralBigInt,
-          leverageBigInt
-        );
-      }
+      openPosition(
+        marketAddress,
+        pendingPosition.direction,
+        collateralBigInt,
+        leverageBigInt
+      );
     }
-  }, [isPriceUpdated, pendingPriceUpdate, pendingPosition, isUpdatingPrice, allowance, approve, openPosition, marketAddress]);
+  }, [isPriceUpdated, pendingPriceUpdate, pendingPosition, isUpdatingPrice, isOpeningPosition, openPosition, marketAddress]);
 
-  // Handle price update errors
+  // Handle price update errors - MUST stop the flow if price update fails
   useEffect(() => {
     if (isPriceUpdateError && pendingPriceUpdate) {
-      console.error('Price update failed:', priceUpdateError);
+      console.error('=== PRICE UPDATE FAILED ===');
+      console.error('Error:', priceUpdateError);
+      console.error('This will prevent position opening.');
+      console.error('===========================');
       setPendingPriceUpdate(false);
       setTransactionStartTime(null);
-      alert('Failed to update price. Only the contract owner can update prices. Please contact the admin.');
+      setPendingPosition(null);
+      resetPriceUpdate();
+      alert('Failed to update price on contract. The price feed may not be registered. Please try again or contact support.');
     }
-  }, [isPriceUpdateError, pendingPriceUpdate, priceUpdateError]);
+  }, [isPriceUpdateError, pendingPriceUpdate, priceUpdateError, resetPriceUpdate]);
 
   // Calculate expiry info
   const expiry = expiryTimestamp ? Number(expiryTimestamp) : 0;
@@ -203,32 +226,6 @@ export function TradingPanel({ market }: TradingPanelProps) {
     }
   }, [isPending, transactionStartTime, resetPriceUpdate]);
 
-  // After wallet approval succeeds, open real position on contract
-  useEffect(() => {
-    console.log('Approval useEffect triggered', {
-      isApproved,
-      pendingPosition,
-      isApproving,
-      approveHash,
-      address
-    });
-
-    // Open position after user confirms approval in wallet
-    if (isApproved && pendingPosition && !isApproving && !isOpeningPosition) {
-      console.log('Wallet approval confirmed! Opening position on contract...');
-
-      // Convert to contract format (18 decimals for collateral, leverage as-is 1-40)
-      const collateralBigInt = BigInt(Math.floor(pendingPosition.amount * 1e18));
-      const leverageBigInt = BigInt(pendingPosition.leverage); // Leverage 1-40 (contract expects simple number)
-
-      openPosition(
-        marketAddress,
-        pendingPosition.direction,
-        collateralBigInt,
-        leverageBigInt
-      );
-    }
-  }, [isApproved, pendingPosition, isApproving, isOpeningPosition, marketAddress, openPosition]);
 
   // Handle opening a new position
   const handleOpenPosition = () => {
@@ -263,23 +260,39 @@ export function TradingPanel({ market }: TradingPanelProps) {
       return;
     }
 
+    // Check if market is expired
+    if (expiryTimestamp) {
+      const expiry = Number(expiryTimestamp);
+      const now = Math.floor(Date.now() / 1000);
+      if (now >= expiry) {
+        alert(`This market has expired! Expiry was ${new Date(expiry * 1000).toLocaleString()}. Please use a different market.`);
+        return;
+      }
+    }
+
+    // Must have a valid CoinGecko price to update the contract
     if (coinGeckoPrice <= 0) {
-      alert('Unable to fetch current price from CoinGecko. Please try again.');
+      alert('Unable to fetch current price. Please try again.');
       return;
     }
+
+    // Reset any stale price update state from previous transactions
+    resetPriceUpdate();
 
     // Track transaction start time (for UI feedback)
     setTransactionStartTime(Date.now());
 
-    // Store pending position info
-    setPendingPosition({
+    // Store pending position info for after price update
+    const positionInfo = {
       amount: collateralAmount,
-      direction: side === 'long' ? 0 : 1,
+      direction: side === 'long' ? 0 : 1 as 0 | 1,
       leverage: leverage
-    });
+    };
+    setPendingPosition(positionInfo);
 
-    // First, update the price cache with CoinGecko's real-time price
-    console.log('Updating price cache with CoinGecko price:', coinGeckoPrice);
+    // STEP 1: Update price on contract first (required - price must be fresh within 60 seconds)
+    // The contract has a staleness check that will revert if price is too old
+    console.log('Step 1: Updating price cache with CoinGecko price:', coinGeckoPrice);
     setPendingPriceUpdate(true);
 
     try {
@@ -634,7 +647,7 @@ export function TradingPanel({ market }: TradingPanelProps) {
                 ? 'Updating Price...'
                 : isApproving
                 ? 'Approving USDC...'
-                : 'Placing Prediction...')
+                : 'Opening Position...')
             : isExpired
             ? 'Market Expired'
             : side === 'long'

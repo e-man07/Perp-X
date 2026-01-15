@@ -17,17 +17,17 @@ export const config = {
     usdc: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // Circle USDC (6 decimals)
     markets: {
       btc: {
-        micro: "0xbd1b96f0bcffee4dfdcc683fbec612cddb5d24d8", // 24h BTC market (v4 - with new vault)
+        micro: "0xf8c4ea0762fa9f8c87aea45bc37b1f3f2e66bdaa", // 24h BTC market (fresh - deployed 2026-01-15)
         daily: "0x0000000000000000000000000000000000000000", // 7d BTC market
-        macro: "0x0000000000000000000000000000000000000000", // 30d BTC market
+        macro: "0x091e2b7646594ea506f3ae5d10c6a5fc0376af68", // 30d BTC market (fresh - deployed 2026-01-15)
       },
       eth: {
-        micro: "0x3e741a1d222dc8a392a7caf4d12a8a8b6fb69800", // 24h ETH market
+        micro: "0xfa2644c8617bfcff3ea552fdb66b7dd4f7f01b04", // 24h ETH market (fresh - deployed 2026-01-15)
         daily: "0x0000000000000000000000000000000000000000", // 7d ETH market
         macro: "0x0000000000000000000000000000000000000000", // 30d ETH market
       },
       arb: {
-        micro: "0x95d352b33d82985200c4b5eb83d7a78744f86e85", // 24h ARB market
+        micro: "0xc66226ab3c4cb72bef653dc0f100186ddf515abc", // 24h ARB market (fresh - deployed 2026-01-15)
         daily: "0x0000000000000000000000000000000000000000", // 7d ARB market
         macro: "0x0000000000000000000000000000000000000000", // 30d ARB market
       },
